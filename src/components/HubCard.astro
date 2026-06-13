@@ -1,0 +1,29 @@
+---
+// 허브/카테고리 카드 1장 — 자격증 허브·트랙·코딩 토픽 카드가 공유(중복 제거 SSOT).
+// href 있으면 <a>(클릭 가능), 없으면 <div>(비활성). status 로 운영/예정 배지.
+// 비클릭(준비중이면서 href 없음)일 때만 흐리게(.is-soft).
+// 아이콘 우선순위: icon(기술 브랜드 로고 이미지 경로) > glyph(라인 글리프 이름) > mark(텍스트).
+// 코딩 토픽=icon, 자격증 허브/노드=glyph, 그 외 폴백=mark.
+import Glyph from './Glyph.astro'
+const { href, mark, icon, glyph, title, sub, status = 'live', meta, cool = false } = Astro.props
+const Tag = href ? 'a' : 'div'
+---
+<Tag class:list={['card', { 'card--link': !!href }, 'cat-card', { 'is-soft': !href }]} href={href}>
+  <div class="cat-top">
+    <div class:list={['cat-ico', { 'is-cool': cool, 'has-logo': !!icon }]}>
+      {icon ? <img src={icon} alt={title} width="26" height="26" loading="lazy" /> : glyph ? <Glyph name={glyph} /> : mark}
+    </div>
+    {status === 'live'
+      ? <span class="badge badge--live"><span class="dot"></span>운영</span>
+      : <span class="badge badge--planned"><span class="dot"></span>예정</span>}
+  </div>
+  <div>
+    <div class="cat-title">{title}</div>
+    {sub && <div class="cat-sub">{sub}</div>}
+  </div>
+  {meta && <div class="cat-meta">{meta}</div>}
+</Tag>
+
+<style>
+  .cat-card.is-soft { opacity: .72; }
+</style>

@@ -1,0 +1,28 @@
+---
+// 강 위치 라벨 + 정적 진도바 + (localStorage) 읽음 토글.
+// 위치(index/total)·바는 빌드타임 정적 → JS 꺼져도 "전체 N강 중 K강"은 항상 보인다.
+// 읽음 토글/이어보기 저장은 Base.astro 런타임이 data-* 계약으로 처리(여기선 마크업만).
+// 검색 비색인(data-pagefind-ignore) — 코딩 강은 doc-main(data-pagefind-body) 안이라 필수.
+//   props: index(1-based) · total · unit('강'|'부') · groupLabel · lecKey(=강 URL, 목록 href와 동일) · lecLabel
+//   prefix/totalUnit/posUnit: 문구 미세조정(예: cpe 는 강 번호와 헷갈리지 않게 "슬라이드 N개 중 K번째")
+const { index, total, unit = '강', prefix = '전체', totalUnit, posUnit, groupLabel = '', lecKey, lecLabel = '' } = Astro.props
+const tu = totalUnit || unit
+const pu = posUnit || unit
+const posPct = total ? Math.round((index / total) * 100) : 0
+---
+<div class="lec-progress" data-pagefind-ignore data-lec data-read-key={lecKey} data-lec-key={lecKey} data-lec-label={lecLabel}>
+  <div class="lp-row">
+    <span class="lp-pos">{prefix} {total}{tu} 중 <b>{index}{pu}</b>{groupLabel && <span class="lp-group"> · {groupLabel}</span>}</span>
+    <button class="lp-toggle" type="button" data-lec-toggle aria-pressed="false">
+      <span class="lbl-todo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/></svg>
+        읽음으로 표시
+      </span>
+      <span class="lbl-done">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.5 2.5L16 9.5"/></svg>
+        읽음
+      </span>
+    </button>
+  </div>
+  <div class="lp-bar"><i style={`width:${posPct}%`}></i></div>
+</div>

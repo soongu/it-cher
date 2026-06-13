@@ -1,0 +1,17 @@
+---
+import Base from '../../../../layouts/Base.astro'
+import ComingSoon from '../../../../components/ComingSoon.astro'
+import { certNode } from '../../../../lib/content.mjs'
+const node = certNode('sqld', 'theory')
+const p = node.preview
+---
+<Base title="SQLD 이론 — 준비중 · it-cher" desc={p.context}>
+  <ComingSoon
+    title="SQLD 이론"
+    context={p.context}
+    roadmap={p.roadmap}
+    live={p.live}
+    ctas={p.ctas}
+    crumbs={[{ href: '/', label: '홈' }, { href: '/cert/', label: '자격증' }, { href: '/cert/sqld/', label: 'SQLD' }, { label: '이론' }]}
+  />
+</Base>

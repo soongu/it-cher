@@ -1,0 +1,61 @@
+---
+import Base from '../../../layouts/Base.astro'
+import Crumbs from '../../../components/Crumbs.astro'
+import { codeBuckets, codeBucket } from '../../../lib/content.mjs'
+import { FUNNELS } from '../../../lib/links.mjs'
+import FunnelCta from '../../../components/FunnelCta.astro'
+import TopicCard from '../../../components/TopicCard.astro'
+import WhatIsModal from '../../../components/WhatIsModal.astro'
+import HubCard from '../../../components/HubCard.astro'
+
+export function getStaticPaths() {
+  // dir 토픽을 가진 모든 분류에 버킷 페이지 생성(준비중 포함) — 0강 분류도 로드맵을 보여줘 막다른 길이 안 되게.
+  return codeBuckets().filter((b) => b.topics.some((t) => t.dir)).map((b) => ({ params: { bucket: b.slug } }))
+}
+
+const { bucket } = Astro.params
+const b = codeBucket(bucket)
+
+// 토픽 카드 + '뭘 배우나요?' 모달이 공유하는 뷰모델.
+// dir 토픽은 0강이어도 페이지(커리큘럼 로드맵)가 있어 클릭 가능 → TopicCard(듀얼 CTA).
+// dir 없는 토픽(이론상 soon 버킷에만 존재 → 이 라이브 버킷 페이지엔 안 옴)은 안전망으로 비활성 HubCard.
+const topicViews = b.topics.map((t) => {
+  if (!t.dir) return { t, fallback: true }
+  const live = t.lectures.length > 0
+  return {
+    t, fallback: false,
+    href: `/code/${b.slug}/${t.slug}/`,
+    status: live ? 'live' : 'soon',
+    meta: live ? `${t.lectures.length}개 강의` : '커리큘럼 로드맵',
+    whatisId: t.whatis ? `whatis-${t.slug}` : null,
+  }
+})
+const modalViews = topicViews.filter((v) => v.whatisId)
+---
+<Base title={`${b.label} — 코딩 · it-cher`} desc={`${b.label} · ${b.subtitle} 강의 문서`}>
+  <div class="page">
+    <Crumbs trail={[{ href: '/code/', label: '코딩' }, { label: b.label }]} />
+    <div class="page-head">
+      <h1>{b.label}</h1>
+      <p class="lede">{b.subtitle}</p>
+    </div>
+
+    <div class="grid grid-3">
+      {topicViews.map((v) => v.fallback
+        ? <HubCard glyph="code" title={v.t.label} status="soon" meta="준비중" />
+        : <TopicCard href={v.href} icon={v.t.icon} title={v.t.label} status={v.status} meta={v.meta} whatisId={v.whatisId} />)}
+    </div>
+
+    <div class="cta-band">
+      <p class="eyebrow">더 배우려면</p>
+      <h3 class="t-h3">개발, 끝까지 배우고 싶다면</h3>
+      <p>무료 자료로 감 잡았다면 팀스파르타 백엔드 부트캠프에서 실무 프로젝트까지.</p>
+      <div class="cta-row"><FunnelCta funnel={FUNNELS.sparta} label="팀스파르타 내일배움캠프" /></div>
+    </div>
+
+    {/* 토픽별 '뭘 배우나요?' 모달 — 카드의 [뭘 배우나요?] CTA(data-whatis-open)가 id로 연다. */}
+    {modalViews.map((v) => (
+      <WhatIsModal id={v.whatisId} title={v.t.label} icon={v.t.icon} href={v.href} whatis={v.t.whatis} prereq={v.t.prereq} />
+    ))}
+  </div>
+</Base>

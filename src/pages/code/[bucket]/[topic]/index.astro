@@ -1,0 +1,96 @@
+---
+import Base from '../../../../layouts/Base.astro'
+import Crumbs from '../../../../components/Crumbs.astro'
+import { codeBuckets, topicGroups } from '../../../../lib/content.mjs'
+import { FUNNELS } from '../../../../lib/links.mjs'
+import FunnelCta from '../../../../components/FunnelCta.astro'
+import ProgressGroup from '../../../../components/ProgressGroup.astro'
+import LevelPrereq from '../../../../components/LevelPrereq.astro'
+import PhaseList from '../../../../components/PhaseList.astro'
+import RepoBanner from '../../../../components/RepoBanner.astro'
+
+export function getStaticPaths() {
+  const paths = []
+  for (const b of codeBuckets()) {
+    for (const t of b.topics) {
+      // dir 가 있는 토픽은 0강이어도 페이지 생성 → 커리큘럼 로드맵(준비중)을 보여준다.
+      if (t.dir) {
+        paths.push({ params: { bucket: b.slug, topic: t.slug }, props: { bucketLabel: b.label, topic: t } })
+      }
+    }
+  }
+  return paths
+}
+
+const { bucket, topic: topicSlug } = Astro.params
+const { bucketLabel, topic } = Astro.props
+const data = topicGroups(topicSlug)
+const baseHref = `/code/${bucket}/${topicSlug}/`
+const progItems = topic.lectures.map((l) => ({ h: `${baseHref}${l.slug}/`, l: l.title }))
+const phaseCount = data.tiers.reduce((n, t) => n + t.groups.filter((g) => g.lectures.length).length, 0)
+const isSoon = topic.lectures.length === 0
+// 커리큘럼(Phase/Category) 구조가 있는가 = 라벨이 붙은 group 보유. TOPIC_CURRICULUM 없는 토픽은 라벨 없는 단일 group 으로
+//   degrade → PhaseList 가 빈 본문이 된다. 그 경우 'Phase 순서대로' 약속(lede) 대신 정직한 '준비 중' 안내를 보여준다.
+const hasRoadmap = data.tiers.some((t) => t.groups.some((g) => g.label))
+---
+<Base title={`${topic.label} — ${bucketLabel} · it-cher`} desc={`${bucketLabel} · ${topic.label} 커리큘럼 · 강의 목록`}>
+  <div class="page">
+    <Crumbs trail={[{ href: '/code/', label: '코딩' }, { href: `/code/${bucket}/`, label: bucketLabel }, { label: topic.label }]} />
+    <div class="page-head">
+      {isSoon && <span class="soon-chip">🚧 준비중 · 커리큘럼 로드맵</span>}
+      <div class="topic-title">
+        {topic.icon && <img class="topic-logo" src={topic.icon} alt={topic.label} width="36" height="36" />}
+        <h1>{topic.label}</h1>
+      </div>
+      <p class="lede">
+        {isSoon
+          ? (hasRoadmap
+              ? '전체 커리큘럼 로드맵이에요. 아래 Phase 순서대로 강의를 순차 공개합니다.'
+              : '이 트랙은 곧 공개돼요. 커리큘럼 로드맵이 준비되는 대로 여기에 채울게요. 그동안 아래에서 먼저 시작해볼 수 있어요.')
+          : `전체 ${topic.lectures.length}강 · ${phaseCount}개 Phase. 순서대로 따라오면 돼요.`}
+      </p>
+      <LevelPrereq level={topic.level} prereq={topic.prereq} note={topic.note} />
+    </div>
+
+    {/* 강의목록 상단 GitHub 실습 소스코드 배너 — repo 메타가 있는 토픽만(content.mjs SSOT). */}
+    {topic.repo && <RepoBanner repo={topic.repo} topicLabel={topic.label} />}
+
+    {!isSoon && <div style="margin-bottom: var(--sp-6);"><ProgressGroup items={progItems} /></div>}
+
+    {(hasRoadmap || !isSoon)
+      ? <PhaseList data={data} baseHref={baseHref} />
+      : <div class="roadmap-pending">📋 커리큘럼 로드맵을 준비하고 있어요. 곧 Phase별 강의 순서를 여기에 채울게요. 그동안 아래에서 다음 걸음을 골라보세요.</div>}
+
+    {/* F38: 라이브 토픽(완주 지점)에도 퍼널 접점을 둔다 — 학습동선(ProgressGroup·PhaseList) 아래, 완주 맥락 카피로. */}
+    {isSoon ? (
+      <div class="cta-band">
+        <p class="eyebrow">먼저 시작하려면</p>
+        <h3 class="t-h3">강의 공개 전, 기초부터 다지기</h3>
+        <p>이 트랙은 곧 공개돼요. 그동안 팀스파르타 내일배움캠프에서 실무 프로젝트로 먼저 익혀볼 수 있어요.</p>
+        <div class="cta-row"><FunnelCta funnel={FUNNELS.sparta} label="팀스파르타 내일배움캠프" /></div>
+      </div>
+    ) : (
+      <div class="cta-band">
+        <p class="eyebrow">전 강을 마쳤다면</p>
+        <h3 class="t-h3">실무 프로젝트로 더 깊게</h3>
+        <p>이 트랙을 끝까지 따라왔다면, 다음은 직접 만드는 실무 프로젝트예요. 팀스파르타 내일배움캠프에서 풀스택으로 완성해 보세요.</p>
+        <div class="cta-row"><FunnelCta funnel={FUNNELS.sparta} label="팀스파르타 내일배움캠프" /></div>
+      </div>
+    )}
+  </div>
+</Base>
+
+<style>
+  .soon-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 12px; border-radius: 999px; margin-bottom: var(--sp-3);
+    font-size: var(--fs-xs); font-weight: var(--fw-bold);
+    color: var(--text-muted); background: var(--surface-subtle); border: 1px solid var(--border-default);
+  }
+  /* 커리큘럼 미작성 토픽(TOPIC_CURRICULUM 없음)의 빈 PhaseList 대체 — 빈 본문 대신 정직한 준비중 안내(막다른 길 방지). */
+  .roadmap-pending {
+    padding: var(--sp-5); border-radius: var(--r-lg);
+    background: var(--surface-subtle); border: 1px dashed var(--border-default);
+    color: var(--text-muted); font-size: var(--fs-sm); line-height: 1.7;
+  }
+</style>

@@ -1,0 +1,17 @@
+---
+import Base from '../../../layouts/Base.astro'
+import ComingSoon from '../../../components/ComingSoon.astro'
+import { certTrack } from '../../../lib/content.mjs'
+const node = certTrack('aws-saa')
+const p = node.preview
+---
+<Base title="AWS SAA 솔루션스 아키텍트 — 준비중 · it-cher" desc={p.context}>
+  <ComingSoon
+    title="AWS SAA · 솔루션스 아키텍트"
+    context={p.context}
+    roadmap={p.roadmap}
+    live={p.live}
+    ctas={p.ctas}
+    crumbs={[{ href: '/', label: '홈' }, { href: '/cert/', label: '자격증' }, { label: 'AWS SAA' }]}
+  />
+</Base>

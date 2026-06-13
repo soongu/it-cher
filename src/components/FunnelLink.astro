@@ -1,0 +1,25 @@
+---
+// 퍼널 링크 래퍼 — funnel.comingSoon 이면 클릭 불가 '준비중'으로, 아니면 ExtLink(외부 새 탭)로.
+// 미런칭 채널(현재: Klue 앱)을 links.mjs(FUNNELS) SSOT의 comingSoon 플래그 한 곳으로 끄고 켠다.
+//   → 런칭되면 links.mjs 에서 comingSoon 만 지우면 사이트 전역 CTA가 다시 라이브(여기/페이지 손 안 댐).
+// '준비중' 상태는 비전공 입문자 제1원칙(막다른 길·죽은 링크 금지)에 맞춰 '죽은 외부링크'가 아니라
+//   명시적 '준비중' 표시(클릭 불가·흐림)로 보여 준다. 디자인시스템 .btn[aria-disabled] 규약과도 합치.
+//   props: funnel(필수, FUNNELS.* 객체) · class · arrow(라이브일 때만 ↗, 기본 true)
+//          badge(준비중 칩 표시, 기본 true — 카드처럼 자체 '준비중' 문구를 넣을 땐 false) · ...rest(style 등)
+import ExtLink from './ExtLink.astro'
+const { funnel, class: cls, arrow = true, badge = true, ...rest } = Astro.props
+const soon = !!funnel?.comingSoon
+---
+{soon
+  ? <span class:list={['is-soon', cls]} aria-disabled="true" title="준비중 — 곧 공개됩니다" {...rest}><slot />{badge && <span class="soon-badge">준비중</span>}</span>
+  : <ExtLink class={cls} href={funnel.url} arrow={arrow} {...rest}><slot /></ExtLink>}
+
+<style>
+  .is-soon { cursor: not-allowed; opacity: .55; pointer-events: none; }
+  .soon-badge {
+    display: inline-block; margin-left: .45em; padding: .08em .55em;
+    border-radius: 999px; font-size: .76em; font-weight: var(--fw-bold);
+    line-height: 1.5; vertical-align: middle; white-space: nowrap;
+    color: var(--text-muted); background: var(--surface-subtle); border: 1px solid var(--border-default);
+  }
+</style>

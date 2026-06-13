@@ -1,0 +1,318 @@
+---
+import Base from '../../layouts/Base.astro'
+import Crumbs from '../../components/Crumbs.astro'
+import { FUNNELS } from '../../lib/links.mjs'
+import { codeBuckets } from '../../lib/content.mjs'
+import { glyphSvg } from '../../lib/glyphs.mjs'
+import FunnelCta from '../../components/FunnelCta.astro'
+import Glyph from '../../components/Glyph.astro'
+
+// 미결정자용 단일 추천 경로 — '웹 만들기' 첫 강(슬러그 바뀌어도 데이터에서 도출)
+const buckets = codeBuckets()
+const web = buckets.find((b) => b.slug === 'web')
+const firstTopic = web?.topics.find((t) => t.lectures?.length)
+const firstLec = firstTopic?.lectures[0]
+const startHref = firstLec ? `/code/web/${firstTopic.slug}/${firstLec.slug}/` : '/code/web/'
+
+// 온보딩 결과 카드 데이터(클라이언트가 추천 슬러그→카드 렌더). 딥링크는 라이브면 첫 강, 아니면 분류 허브.
+const bucketCards = buckets.map((b) => {
+  // 추천 카드는 강의 '목록'으로 진입한다(1강 본문 직행 금지). 라이브 토픽이 있으면 그 강의 목록(강 리스트),
+  // 없으면(준비중 분야) 분야 허브로. 막다른 길 0 — 어느 쪽이든 목록/로드맵이 먼저 보인다.
+  const t0 = b.topics.find((t) => t.lectures?.length)
+  return { slug: b.slug, label: b.label, sub: b.subtitle, icon: glyphSvg(b.glyph), href: t0 ? `/code/${b.slug}/${t0.slug}/` : `/code/${b.slug}/` }
+})
+// 자격증 추천도 같은 원칙 — 1강(슬라이드) 직행 금지, 목록으로 진입. cpe=필기 이론 5과목 목록 / sqld=모의고사 목록.
+const certCards = [
+  { slug: 'cpe', label: '정보처리기사', sub: '필기 이론 5과목 슬라이드', icon: glyphSvg('award'), href: '/cert/cpe/written/theory/' },
+  { slug: 'sqld', label: 'SQLD', sub: '벼락치기 모의고사 풀이', icon: glyphSvg('database'), href: '/cert/sqld/practice/' },
+]
+const onbData = JSON.stringify({ buckets: bucketCards, certs: certCards }).replace(/</g, '\\u003c')
+---
+<Base title="시작하기 — 처음이세요? · it-cher" desc="비전공자를 위한 학습 길안내. 목표에 따라 자격증/코딩 중 맞는 쪽부터.">
+  <div class="page">
+    <Crumbs trail={[{ label: '시작하기' }]} />
+    <div class="page-head">
+      <span class="badge badge--free" style="margin-bottom:12px;">가입 없이 바로 보기</span>
+      <h1>처음이세요? 여기부터요 👋</h1>
+      <p class="lede">전공자가 아니어도 괜찮아요. 목표에 따라 길이 다릅니다. 본인에게 맞는 쪽부터 천천히 보세요.</p>
+      <p style="margin-top: var(--sp-3);"><a class="t-link" href="/map/">또는 전체 커리큘럼을 한눈에 보기 →</a></p>
+    </div>
+
+    {/* 1분 진단 온보딩 — JS 있을 때만 노출(hidden→스크립트가 해제). 결과는 localStorage 저장 + 헤더 '코딩' 메뉴 맞춤 축소.
+        무JS면 아래 단일 추천 CTA·2갈래 그리드가 그대로 baseline(막다른 길 0). */}
+    <section class="onboard card card--pad" id="onboard" aria-label="시작 진단" hidden>
+      <div class="onb-head">
+        <span class="eyebrow">✦ 1분 진단</span>
+        <h2 class="t-h3">뭐부터 시작할지, 같이 정해봐요</h2>
+        <p class="t-sm t-muted">3가지만 고르면 딱 맞는 출발점을 추천하고, 헤더 메뉴도 맞춤으로 정리해 드려요.</p>
+        <div class="onb-progress" data-onb-progress aria-hidden="true">
+          <span class="onb-dot"></span><span class="onb-dot"></span><span class="onb-dot"></span>
+        </div>
+      </div>
+
+      <div class="onb-step" data-onb-step="goal">
+        <div class="onb-q">지금 가장 가까운 목표는?</div>
+        <div class="onb-opts">
+          <button type="button" class="onb-opt" data-onb-goal="code"><span class="onb-opt-ico"><Glyph name="code" /></span><b>코딩·개발 배우기</b><span>웹·앱·서버를 직접 만들고 싶어요</span></button>
+          <button type="button" class="onb-opt" data-onb-goal="cert"><span class="onb-opt-ico"><Glyph name="graduation" /></span><b>자격증 합격</b><span>정처기·SQLD가 목표예요</span></button>
+          <button type="button" class="onb-opt" data-onb-goal="explore"><span class="onb-opt-ico"><Glyph name="sparkles" /></span><b>아직 잘 모르겠어요</b><span>가볍게 둘러보고 정할래요</span></button>
+        </div>
+      </div>
+
+      <div class="onb-step" data-onb-step="level" hidden>
+        <button type="button" class="onb-back" data-onb-back>← 이전</button>
+        <div class="onb-q">코딩, 어느 정도 해보셨어요?</div>
+        <div class="onb-opts">
+          <button type="button" class="onb-opt" data-onb-level="beginner"><span class="onb-opt-ico"><Glyph name="book" /></span><b>완전 처음이에요</b><span>코드 한 줄 안 써봤어요</span></button>
+          <button type="button" class="onb-opt" data-onb-level="some"><span class="onb-opt-ico"><Glyph name="code" /></span><b>조금 해봤어요</b><span>기초 문법은 본 적 있어요</span></button>
+          <button type="button" class="onb-opt" data-onb-level="experienced"><span class="onb-opt-ico"><Glyph name="terminal" /></span><b>전공·실무 경험</b><span>다른 언어·분야를 다뤄봤어요</span></button>
+        </div>
+      </div>
+
+      <div class="onb-step" data-onb-step="cert" hidden>
+        <button type="button" class="onb-back" data-onb-back>← 이전</button>
+        <div class="onb-q">어떤 자격증이 목표예요?</div>
+        <div class="onb-opts">
+          <button type="button" class="onb-opt" data-onb-cert="cpe"><span class="onb-opt-ico"><Glyph name="award" /></span><b>정보처리기사</b><span>필기 이론 5과목 슬라이드</span></button>
+          <button type="button" class="onb-opt" data-onb-cert="sqld"><span class="onb-opt-ico"><Glyph name="database" /></span><b>SQLD</b><span>벼락치기 모의고사 풀이</span></button>
+          <button type="button" class="onb-opt" data-onb-cert="both"><span class="onb-opt-ico"><Glyph name="graduation" /></span><b>둘 다 / 고민 중</b><span>둘 다 둘러볼래요</span></button>
+        </div>
+      </div>
+
+      <div class="onb-step onb-result" data-onb-step="result" hidden>
+        <div class="onb-result-head">
+          <span class="onb-result-check" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+          </span>
+          <div class="onb-result-headtxt">
+            <span class="onb-result-eyebrow">진단 완료</span>
+            <div class="onb-q" data-onb-title>딱 맞는 출발점을 찾았어요</div>
+          </div>
+        </div>
+        <p class="onb-result-note" data-onb-note></p>
+        <div class="onb-cards" data-onb-cards></div>
+        <div class="onb-actions">
+          <button type="button" class="onb-act" data-onb-restart>↺ 다시 진단하기</button>
+          <button type="button" class="onb-act" data-onb-clear>맞춤 끄기</button>
+        </div>
+      </div>
+    </section>
+
+    <script type="application/json" id="onb-data" is:inline set:html={onbData}></script>
+
+    <div class="start-or"><span>또는, 진단 없이 바로 시작</span></div>
+
+    <div class="card card--pad start-pick">
+      <div class="sp-body">
+        <span class="eyebrow">어디부터 할지 모르겠다면</span>
+        <h2 class="t-h3" style="margin:6px 0 8px;">고민되면, 이거 하나만 해보세요</h2>
+        <p class="t-body t-muted" style="margin:0; max-width: 52ch;">코딩이 처음이라면 ‘웹 만들기’ 1강부터요. 브라우저에 내가 쓴 글자가 뜨는 걸 보면 감이 와요 — 5분이면 충분해요.</p>
+      </div>
+      <a class="btn btn--lg btn--hero sp-cta" href={startHref}>웹 만들기 1강 시작 →</a>
+    </div>
+
+    <div class="start-or"><span>또는 목표가 분명하다면 골라보세요</span></div>
+
+    <div class="grid grid-2">
+      <div class="card card--pad guide">
+        <div class="g-top"><div class="g-ico"><Glyph name="graduation" /></div><div><div class="g-no">① 자격증을 따고 싶어요</div><div class="t-sm t-muted">시험 합격이 목표라면. 슬라이드로 핵심만 빠르게.</div></div></div>
+        <div class="lec-list">
+          <a class="lec-row" href="/cert/cpe/written/theory/"><span class="lec-num"><Glyph name="award" /></span><span><span class="lec-title">정보처리기사</span><span class="lec-sub">필기 이론 5과목 · 강별 슬라이드</span></span><span class="lec-meta"><span class="badge badge--slide">슬라이드</span></span></a>
+          <a class="lec-row" href="/cert/sqld/practice/"><span class="lec-num"><Glyph name="database" /></span><span><span class="lec-title">SQLD</span><span class="lec-sub">벼락치기 모의고사 풀이특강</span></span><span class="lec-meta"><span class="badge badge--slide">슬라이드</span></span></a>
+        </div>
+      </div>
+
+      <div class="card card--pad guide">
+        <div class="g-top"><div class="g-ico is-cool"><Glyph name="code" /></div><div><div class="g-no">② 직접 만들어보고 싶어요</div><div class="t-sm t-muted">코드로 화면이 바뀌는 재미부터. 무엇을 만드는지로.</div></div></div>
+        <div class="lec-list">
+          <a class="lec-row" href="/code/web/"><span class="lec-num"><Glyph name="globe" /></span><span><span class="lec-title">웹 프론트</span><span class="lec-sub">HTML·CSS·JS (입문 추천)</span></span><span class="lec-meta"><span class="badge badge--doc">문서</span></span></a>
+          <a class="lec-row" href="/code/language/"><span class="lec-num"><Glyph name="code" /></span><span><span class="lec-title">언어 기초</span><span class="lec-sub">자바부터 차근차근</span></span><span class="lec-meta"><span class="badge badge--doc">문서</span></span></a>
+          <a class="lec-row" href="/code/ai/"><span class="lec-num"><Glyph name="sparkles" /></span><span><span class="lec-title">AI</span><span class="lec-sub">스프링 AI</span></span><span class="lec-meta"><span class="badge badge--doc">문서</span></span></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="cta-band">
+      <p class="eyebrow">더 깊이, 끝까지</p>
+      <h3 class="t-h3">방향을 잡았다면 다음 단계로</h3>
+      <p>무료 자료로 감을 잡았다면, 자격증은 Klue 앱·에듀윌로, 개발은 팀스파르타 부트캠프로 이어가세요.</p>
+      <div class="cta-row">
+        <FunnelCta funnel={FUNNELS.klue} label="Klue 살펴보기" />
+        <FunnelCta funnel={FUNNELS.eduwill} label="에듀윌 강의" class="btn btn--secondary" />
+        <FunnelCta funnel={FUNNELS.sparta} label="팀스파르타 내일배움캠프" class="btn btn--secondary" />
+      </div>
+    </div>
+  </div>
+
+  {/* 온보딩 위저드 런타임 — 선택을 itcher:onboard:v1 에 저장하고 ITcherNav.apply()로 헤더 '코딩' 메뉴를 즉시 맞춤 축소.
+      진단 결과 카드는 #onb-data(빌드타임 도출)에서 렌더. 무JS면 section[hidden] 이라 위저드 자체가 안 보임(죽은 UI 0). */}
+  <script is:inline>
+    (function () {
+      var KEY = 'itcher:onboard:v1';
+      var root = document.getElementById('onboard');
+      if (!root) return;
+      var MAP = { buckets: [], certs: [] };
+      try { MAP = JSON.parse(document.getElementById('onb-data').textContent); } catch (e) {}
+      var bucketBy = {}, certBy = {};
+      MAP.buckets.forEach(function (b) { bucketBy[b.slug] = b; });
+      MAP.certs.forEach(function (c) { certBy[c.slug] = c; });
+
+      var REC = { beginner: ['web', 'basics', 'language'], some: ['language', 'web', 'backend'], experienced: ['backend', 'ai', 'cs'] };
+      var state = { goal: null, level: null, cert: null };
+
+      function setProgress(name) {
+        var idx = name === 'goal' ? 0 : (name === 'result' ? 2 : 1);
+        root.querySelectorAll('.onb-dot').forEach(function (d, i) { d.classList.toggle('is-on', i <= idx); });
+      }
+      function show(name) {
+        root.querySelectorAll('[data-onb-step]').forEach(function (s) { s.hidden = (s.getAttribute('data-onb-step') !== name); });
+        setProgress(name);
+      }
+      function load() { try { var v = JSON.parse(localStorage.getItem(KEY)); return v && v.v === 1 ? v : null; } catch (e) { return null; } }
+      function save(res) {
+        res.v = 1; res.ts = Date.now();
+        try { localStorage.setItem(KEY, JSON.stringify(res)); } catch (e) {}
+        if (window.ITcherNav && window.ITcherNav.apply) window.ITcherNav.apply();
+      }
+      function resolve() {
+        if (state.goal === 'cert') { return { goal: 'cert', cert: state.cert, recCode: [], recCert: state.cert === 'both' ? ['cpe', 'sqld'] : [state.cert] }; }
+        if (state.goal === 'explore') { return { goal: 'explore', recCode: ['web', 'basics'], recCert: ['cpe'] }; }
+        return { goal: 'code', level: state.level, recCode: REC[state.level] || REC.beginner, recCert: [] };
+      }
+      function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+      function card(it, top) {
+        return '<a class="onb-card' + (top ? ' is-top' : '') + '" href="' + esc(it.href) + '">' +
+          '<span class="onb-card-ico">' + (it.icon || '') + '</span>' +
+          '<span class="onb-card-body">' +
+            (top ? '<span class="onb-card-tag">추천 출발점</span>' : '') +
+            '<b class="onb-card-label">' + esc(it.label) + '</b>' +
+            '<span class="onb-card-sub">' + esc(it.sub) + '</span>' +
+          '</span>' +
+          '<span class="onb-card-go">' + (top ? '여기부터 시작 →' : '둘러보기 →') + '</span></a>';
+      }
+      function renderResult(res) {
+        var items = [];
+        (res.recCode || []).forEach(function (s) { if (bucketBy[s]) items.push(bucketBy[s]); });
+        (res.recCert || []).forEach(function (s) { if (certBy[s]) items.push(certBy[s]); });
+        if (!items.length && bucketBy.web) items.push(bucketBy.web);
+        root.querySelector('[data-onb-cards]').innerHTML = items.map(function (it, i) { return card(it, i === 0); }).join('');
+        root.querySelector('[data-onb-note]').innerHTML = (res.recCode || []).length
+          ? '딱 맞는 출발점이에요. 헤더 <b>코딩</b> 메뉴도 추천 분야 위주로 정리했어요 — ‘전체 분야 보기’로 언제든 펼칠 수 있어요.'
+          : '자격증 추천이에요. 헤더 <b>자격증</b> 메뉴에서 전체 트랙을 볼 수 있어요.';
+        show('result');
+      }
+      function go() { var res = resolve(); save(res); renderResult(res); }
+
+      root.addEventListener('click', function (e) {
+        var t = e.target.closest('button'); if (!t || !root.contains(t)) return;
+        if (t.hasAttribute('data-onb-goal')) {
+          state.goal = t.getAttribute('data-onb-goal'); state.level = null; state.cert = null;
+          if (state.goal === 'code') show('level');
+          else if (state.goal === 'cert') show('cert');
+          else go();
+        } else if (t.hasAttribute('data-onb-level')) { state.level = t.getAttribute('data-onb-level'); go(); }
+        else if (t.hasAttribute('data-onb-cert')) { state.cert = t.getAttribute('data-onb-cert'); go(); }
+        else if (t.hasAttribute('data-onb-back')) { show('goal'); }
+        else if (t.hasAttribute('data-onb-restart')) { state = { goal: null, level: null, cert: null }; show('goal'); }
+        else if (t.hasAttribute('data-onb-clear')) {
+          try { localStorage.removeItem(KEY); } catch (e2) {}
+          if (window.ITcherNav && window.ITcherNav.clear) window.ITcherNav.clear();
+          state = { goal: null, level: null, cert: null }; show('goal');
+        }
+      });
+
+      root.hidden = false;                 // JS 확인됨 → 위저드 노출
+      var saved = load();
+      if (saved) { state.goal = saved.goal || null; state.level = saved.level || null; state.cert = saved.cert || null; renderResult(saved); }
+      else show('goal');
+    })();
+  </script>
+</Base>
+
+<style>
+  .guide { display:flex; flex-direction:column; gap: var(--sp-4); }
+  .g-top { display:flex; align-items:flex-start; gap: var(--sp-3); }
+  .g-ico { width:46px; height:46px; flex:none; border-radius: var(--r-lg); display:grid; place-items:center; font-size:22px; background: var(--brand-tint); border:1px solid var(--brand-tint-bd); color: var(--brand-text); }
+  .g-ico.is-cool { background: var(--info-bg); border-color: var(--info-border); color: var(--info); }
+  .g-ico :global(.gi) { width: 24px; height: 24px; }
+  .g-no { font-weight: var(--fw-bold); color: var(--text-strong); font-size: var(--fs-h4); }
+  .guide .lec-num { font-weight: var(--fw-bold); color: var(--text-muted); }
+  .guide .lec-num :global(.gi) { width: 20px; height: 20px; margin-inline: auto; }
+
+  .start-pick { display:flex; align-items:center; justify-content:space-between; gap: var(--sp-5); margin-top: var(--sp-5); border-color: var(--brand-tint-bd); background: linear-gradient(180deg, var(--brand-tint), var(--surface-card) 92%); }
+  .start-pick .sp-body { min-width: 0; }
+  .start-pick .sp-cta { flex: none; }
+  @media (max-width: 560px){ .start-pick { flex-direction: column; align-items: flex-start; } .start-pick .sp-cta { width: 100%; text-align: center; } }
+  .start-or { display:flex; align-items:center; gap: var(--sp-4); margin: var(--sp-6) 0 var(--sp-5); color: var(--text-faint); font-size: var(--fs-sm); }
+  .start-or::before, .start-or::after { content:""; flex:1; height:1px; background: var(--border-default); }
+
+  /* 온보딩 위저드 (Phase 2) */
+  .onboard { margin-top: var(--sp-5); display:flex; flex-direction:column; gap: var(--sp-4); border-color: var(--brand-tint-bd); background: linear-gradient(180deg, var(--brand-tint), var(--surface-card) 72%); }
+  /* display:flex 가 UA [hidden]{display:none} 를 덮어쓰므로 명시적으로 재차단 — 무JS시 위저드 숨김(죽은 UI 0). */
+  .onboard[hidden] { display: none; }
+  .onb-head .eyebrow { color: var(--brand-text); }
+  .onb-head h2 { margin: 6px 0 6px; }
+  .onb-q { font-weight: var(--fw-bold); color: var(--text-strong); font-size: var(--fs-h4); margin-bottom: var(--sp-3); }
+  .onb-opts { display:grid; gap: var(--sp-2); grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 640px){ .onb-opts { grid-template-columns: 1fr; } }
+  .onb-opt { display:flex; flex-direction:column; gap: 5px; align-items:flex-start; text-align:left; padding: 16px; border:1.5px solid var(--border-default); border-radius: var(--r-lg); background: var(--surface-card); cursor:pointer; font-family:inherit; transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease); }
+  .onb-opt:hover { border-color: var(--brand); background: var(--surface-subtle); transform: translateY(-2px); box-shadow: var(--shadow-md, 0 6px 18px rgba(0,0,0,.07)); }
+  .onb-opt:hover .onb-opt-ico { background: var(--brand); border-color: var(--brand); color: #fff; }
+  .onb-opt .onb-opt-ico { width: 38px; height: 38px; border-radius: var(--r-md, 10px); display:grid; place-items:center; background: var(--brand-tint); border:1px solid var(--brand-tint-bd); color: var(--brand-text); margin-bottom: 3px; transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease); }
+  .onb-opt-ico :global(.gi) { width: 20px; height: 20px; }
+  .onb-opt b { font-size: var(--fs-body); color: var(--text-strong); font-weight: var(--fw-bold); }
+  .onb-opt span { font-size: var(--fs-xs); color: var(--text-muted); }
+  .onb-back { align-self:flex-start; background:none; border:none; color: var(--text-muted); font-family:inherit; font-size: var(--fs-sm); cursor:pointer; padding: 0 0 6px; }
+  .onb-back:hover { color: var(--text-strong); }
+  /* 진단 진행 표시 — 가벼운 단계 점(목표→선택→결과)으로 '온보딩 흐름' 감각을 준다. */
+  .onb-progress { display:flex; gap: 7px; margin-top: var(--sp-3); }
+  .onb-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--border-default); transition: background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease); }
+  .onb-dot.is-on { background: var(--brand); transform: scale(1.15); }
+
+  /* 결과 완료 헤더 — 진단이 끝나 '맞춤 경로를 찾았다'는 보상감을 시각적으로 강조. */
+  .onb-result-head { display:flex; align-items:center; gap: var(--sp-3); margin-bottom: var(--sp-4); }
+  .onb-result-check { flex:none; width: 44px; height: 44px; border-radius: var(--r-full); display:grid; place-items:center; background: var(--ok-bg); color: var(--ok); border: 1px solid var(--ok-border); }
+  .onb-result-check svg { width: 24px; height: 24px; }
+  .onb-result-eyebrow { font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: .02em; color: var(--ok); }
+  .onb-result-headtxt .onb-q { margin: 2px 0 0; }
+  .onb-result-note { font-size: var(--fs-body); color: var(--text-default); line-height: var(--lh-relaxed, 1.65); margin: 0 0 var(--sp-4); max-width: 62ch; }
+
+  .onb-cards { display:grid; gap: var(--sp-3); grid-template-columns: 1fr; }
+  .onb-actions { display:flex; gap: var(--sp-4); margin-top: var(--sp-5); }
+  .onb-act { background:none; border:none; padding:0; cursor:pointer; font-family:inherit; font-size: var(--fs-sm); font-weight: var(--fw-medium); color: var(--text-muted); }
+  .onb-act:hover { color: var(--brand-text); text-decoration: underline; }
+</style>
+
+<!-- 결과 카드는 런타임 JS(innerHTML)로 주입돼 Astro 스코프 속성(data-astro-cid)이 안 붙는다 →
+     스코프 스타일이 안 먹는다(과거 버그: 카드가 무스타일 인라인 텍스트로 깨짐). #onboard 하위로 한정한
+     is:global 로 작성해 주입 노드에도 적용되게 한다(사이트 전역 누출은 #onboard id로 차단). -->
+<style is:global>
+  #onboard .onb-card {
+    position: relative; display: flex; align-items: center; gap: var(--sp-4);
+    padding: 18px 20px; border: 1.5px solid var(--border-default); border-radius: var(--r-xl, 16px);
+    background: var(--surface-card); color: inherit; text-decoration: none;
+    transition: border-color var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease), box-shadow var(--dur-fast) var(--ease);
+  }
+  #onboard .onb-card:hover { border-color: var(--brand); transform: translateY(-2px); box-shadow: var(--shadow-md, 0 6px 20px rgba(0,0,0,.08)); text-decoration: none; }
+  #onboard .onb-card.is-top { border-color: var(--brand); background: linear-gradient(120deg, var(--brand-tint), var(--surface-card) 78%); box-shadow: 0 4px 18px rgba(219,63,40,.12); }
+
+  #onboard .onb-card-ico {
+    flex: none; width: 46px; height: 46px; border-radius: var(--r-lg);
+    display: grid; place-items: center; background: var(--info-bg); border: 1px solid var(--info-border); color: var(--info);
+  }
+  #onboard .onb-card.is-top .onb-card-ico { background: var(--brand-tint); border-color: var(--brand-tint-bd); color: var(--brand-text); }
+  #onboard .onb-card-ico .gi { width: 20px; height: 20px; }
+
+  #onboard .onb-card-body { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+  #onboard .onb-card-tag { align-self: flex-start; font-size: 11px; font-weight: var(--fw-bold); color: #fff; background: var(--brand); padding: 2px 9px; border-radius: 999px; margin-bottom: 2px; }
+  #onboard .onb-card-label { font-size: var(--fs-h4); font-weight: var(--fw-bold); color: var(--text-strong); }
+  #onboard .onb-card-sub { font-size: var(--fs-sm); color: var(--text-muted); line-height: 1.45; }
+  #onboard .onb-card-go { flex: none; font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--brand-text); white-space: nowrap; }
+  #onboard .onb-card.is-top .onb-card-go { color: #fff; background: var(--brand); padding: 9px 16px; border-radius: var(--r-full); }
+
+  @media (max-width: 520px) {
+    #onboard .onb-card { flex-wrap: wrap; gap: var(--sp-3); padding: 16px; }
+    #onboard .onb-card-go { width: 100%; text-align: center; }
+    #onboard .onb-card.is-top .onb-card-go { box-sizing: border-box; }
+  }
+</style>

@@ -1,0 +1,27 @@
+# Terraform 로컬 산출물 — 커밋 금지
+.terraform/
+.terraform.tfstate.lock.info
+
+# 상태 파일(민감정보 포함 가능) — 로컬 백엔드 사용 중. 원격 백엔드로 옮기면 자동 무관.
+*.tfstate
+*.tfstate.*
+
+# 저장된 plan 산출물(planned state·민감값 포함 가능) — 적용 후 폐기, 커밋 금지
+tfplan
+*.tfplan
+
+# 실제 변수값(자격증명/도메인 등) — 예시(.example)만 커밋
+*.tfvars
+!*.tfvars.example
+
+# 기타
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# .terraform.lock.hcl 은 커밋 권장(프로바이더 버전 고정) → 무시하지 않음

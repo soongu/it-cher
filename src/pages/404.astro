@@ -1,0 +1,34 @@
+---
+import Base from '../layouts/Base.astro'
+// Astro는 404.astro를 특별 처리해 dist/404.html 로 출력한다(디렉터리 포맷이어도 루트 404.html).
+// CloudFront custom_error_response(403/404 → /404.html)의 타깃. 비전공자 막다른 길 방지(길찾기 제공).
+---
+<Base title="페이지를 찾을 수 없어요 — it-cher" desc="요청한 페이지를 찾지 못했습니다." noindex={true}>
+  <section class="nf">
+    <div class="nf-inner">
+      <div class="nf-code">404</div>
+      <h1 class="t-h2">페이지를 찾을 수 없어요</h1>
+      <p class="t-body t-muted">주소가 바뀌었거나 아직 준비 중인 페이지일 수 있어요. 아래에서 길을 다시 찾아보세요.</p>
+      <div class="nf-cta">
+        <a class="btn btn--lg btn--hero" href="/">홈으로</a>
+        <a class="btn btn--lg btn--secondary" href="/map/">커리큘럼 전체보기</a>
+      </div>
+      <div class="nf-links">
+        <a href="/cert/">자격증</a><span aria-hidden="true">·</span>
+        <a href="/code/">코딩</a><span aria-hidden="true">·</span>
+        <a href="/start/">시작하기</a><span aria-hidden="true">·</span>
+        <button class="nf-search" type="button" data-search-open>검색 열기</button>
+      </div>
+    </div>
+  </section>
+</Base>
+<style>
+  .nf { min-height: 58vh; display: grid; place-items: center; padding: var(--sp-8) var(--sp-5); }
+  .nf-inner { text-align: center; max-width: 46ch; }
+  .nf-code { font-size: clamp(3.5rem, 12vw, 6rem); font-weight: var(--fw-extra); line-height: 1; color: var(--brand-text); letter-spacing: var(--ls-tight); }
+  .nf h1 { margin: var(--sp-3) 0 var(--sp-2); }
+  .nf-cta { display: flex; gap: var(--sp-3); justify-content: center; flex-wrap: wrap; margin: var(--sp-5) 0 var(--sp-4); }
+  .nf-links { display: flex; gap: var(--sp-2); justify-content: center; flex-wrap: wrap; align-items: center; font-size: var(--fs-sm); color: var(--text-muted); }
+  .nf-links a, .nf-search { color: var(--brand-text); background: none; border: none; cursor: pointer; font: inherit; padding: 0; }
+  .nf-links a:hover, .nf-search:hover { text-decoration: underline; }
+</style>

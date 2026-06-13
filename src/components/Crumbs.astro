@@ -1,0 +1,25 @@
+---
+// 공용 브레드크럼(F43) — 사이트 전 페이지의 위치 표시를 한 컴포넌트로 통일한다.
+// 예전엔 목록(div.breadcrumb·홈 포함)·코딩 상세(div.doc-crumb·홈/현재 생략)·자격증 상세(div.breadcrumb·홈 생략)로
+// 3종이 제각각이라 드리프트였음 → 시맨틱 <nav aria-label="현재 위치"> + 항상 '홈' 포함 + 마지막(현재 페이지)은
+// aria-current="page" 텍스트(F34/F42 브레드크럼 nav 부분 흡수).
+//
+// trail: [{ href?, label }] — '홈' 다음의 경로 항목들. '홈'은 자동으로 맨 앞에 붙는다(중복 전달 금지).
+//        마지막 항목은 현재 페이지로 간주해 링크가 아닌 텍스트(aria-current="page")로 렌더(href 있어도 무시).
+// 스타일은 doc.css 의 전역 `.breadcrumb` 를 그대로 쓴다(SSOT). 검색 색인 제외(코딩 상세는 본문 색인 안에 있음).
+const { trail = [] } = Astro.props
+const items = [{ href: '/', label: '홈' }, ...trail]
+---
+<nav class="breadcrumb" aria-label="현재 위치" data-pagefind-ignore>
+  {items.map((c, i) => {
+    const last = i === items.length - 1
+    return (
+      <>
+        {last || !c.href
+          ? <span aria-current={last ? 'page' : undefined}>{c.label}</span>
+          : <a href={c.href}>{c.label}</a>}
+        {!last && <span class="sep" aria-hidden="true">/</span>}
+      </>
+    )
+  })}
+</nav>

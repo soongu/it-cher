@@ -1,0 +1,120 @@
+---
+// '뭘 배우나요?' 모달 — 토픽 카드의 [뭘 배우나요?] CTA가 여는 입문자용 설명(비전공 제1원칙).
+// 카피는 content.mjs CODE_BUCKETS[].topics[].whatis(SSOT) 에서 온다(강의 본문 비파괴).
+// 접근성·동작은 Base.astro 사이트 검색 모달과 동일 패턴: scrim + 패널 · ESC 닫기 · 포커스 트랩 · body 잠금 · 포커스 복원.
+// script 블록(비-inline)은 Astro가 인스턴스 수와 무관하게 1번만 번들 → 모든 [data-whatis-modal] 을 공통 제어.
+import Glyph from './Glyph.astro'
+import { topicHrefByLabel } from '../lib/content.mjs'
+const { id, title, icon, glyph = 'code', href, whatis, prereq = [], startLabel = '시작하기' } = Astro.props
+const { lead, learn = [], outcome } = whatis || {}
+const reqs = Array.isArray(prereq) ? prereq.filter(Boolean) : []
+// '먼저 알면 좋아요' 칩 → 해당 토픽 딥링크(매칭 없으면 비링크). 클릭하면 모달을 떠나 선수 토픽으로 이동.
+const reqLinks = reqs.map((p) => ({ label: p, href: topicHrefByLabel(p) }))
+---
+<div class="whatis-modal" id={id} data-whatis-modal hidden role="dialog" aria-modal="true" aria-labelledby={`${id}-title`}>
+  <div class="whatis-scrim" data-whatis-close></div>
+  <div class="whatis-panel" role="document">
+    <div class="whatis-head">
+      <div class="whatis-head-id">
+        <div class:list={['cat-ico', 'is-cool', { 'has-logo': !!icon }]}>
+          {icon ? <img src={icon} alt="" width="26" height="26" /> : <Glyph name={glyph} />}
+        </div>
+        <div>
+          <span class="whatis-eyebrow">뭘 배우나요?</span>
+          <h2 class="whatis-title" id={`${id}-title`}>{title}</h2>
+        </div>
+      </div>
+      <button type="button" class="whatis-close" data-whatis-close aria-label="닫기">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+
+    <div class="whatis-body">
+      {lead && <p class="whatis-lead">{lead}</p>}
+
+      {reqs.length > 0 && (
+        <p class="whatis-prereq">
+          <span class="whatis-prereq-lbl">먼저 알면 좋아요</span>
+          {reqLinks.map((p) => p.href
+            ? <a class="whatis-chip whatis-chip--link" href={p.href} aria-label={`${p.label} 보러 가기`}>{p.label}<span class="whatis-chip-arr" aria-hidden="true">→</span></a>
+            : <span class="whatis-chip">{p.label}</span>)}
+        </p>
+      )}
+
+      {learn.length > 0 && (
+        <div class="whatis-learn-wrap">
+          <p class="whatis-sub">이런 걸 배워요</p>
+          <ul class="whatis-learn">
+            {learn.map((l) => <li>{l}</li>)}
+          </ul>
+        </div>
+      )}
+
+      {outcome && (
+        <div class="whatis-outcome">
+          <span class="whatis-outcome-ico" aria-hidden="true">🎯</span>
+          <p><b>다 배우면</b> {outcome}</p>
+        </div>
+      )}
+    </div>
+
+    <div class="whatis-foot">
+      <a class="btn whatis-foot-start" href={href}>{startLabel} <span aria-hidden="true">→</span></a>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 모든 '뭘 배우나요?' 모달 공통 제어(검색 모달과 동일 동작 계약). 한 번에 하나만 열림.
+  ;(function () {
+    var current = null            // 현재 열린 모달
+    var lastFocus = null          // 열기 직전 포커스(닫을 때 복원)
+
+    function focusables(modal) {
+      return Array.prototype.slice.call(
+        modal.querySelectorAll('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])')
+      ).filter(function (el) { return el.offsetParent !== null || el === document.activeElement })
+    }
+    function open(modal) {
+      if (!modal || current === modal) return
+      if (current) close()        // 다른 모달이 열려 있으면 먼저 닫기
+      lastFocus = document.activeElement
+      modal.removeAttribute('hidden')
+      document.body.classList.add('body--locked')
+      current = modal
+      var f = focusables(modal)
+      var first = modal.querySelector('.whatis-close') || f[0]
+      if (first && first.focus) { try { first.focus() } catch (e) {} }
+      document.addEventListener('keydown', onKey)
+    }
+    function close() {
+      if (!current) return
+      current.setAttribute('hidden', '')
+      document.body.classList.remove('body--locked')
+      document.removeEventListener('keydown', onKey)
+      current = null
+      if (lastFocus && lastFocus.focus) { try { lastFocus.focus() } catch (e) {} }
+      lastFocus = null
+    }
+    function onKey(e) {
+      if (!current) return
+      if (e.key === 'Escape') { e.preventDefault(); close(); return }
+      if (e.key !== 'Tab') return
+      var f = focusables(current); if (!f.length) return
+      var first = f[0], last = f[f.length - 1]
+      if (!current.contains(document.activeElement)) { e.preventDefault(); first.focus() }
+      else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
+    }
+
+    document.querySelectorAll('[data-whatis-open]').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault()
+        open(document.getElementById(btn.getAttribute('data-whatis-open')))
+      })
+    })
+    document.querySelectorAll('[data-whatis-close]').forEach(function (el) {
+      el.addEventListener('click', close)
+    })
+  })()
+</script>

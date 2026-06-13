@@ -1,0 +1,54 @@
+---
+// 슬라이드 데크 임베드 (자격증 트랙 공용) — claude.ai/design 핸드오프 ②
+// 1024×768 고정 데크(<deck-stage> iframe)를 fit-to-width 로 감싸고, 모바일 조작 컨트롤
+// (이전/다음/카운터/전체화면)을 제공한다. 데크 iframe 내부(슬라이드 콘텐츠)는 비수정 —
+// 동일 출처라 데크의 호스트 연동 프로토콜(postMessage)·공개 게터(index/length)·slidechange
+// ·정식 네비(_advance, 데크 자체 버튼과 동일 경로)로만 제어한다.
+//   props: src(데크 index.html 경로) · label(예: "3강 · 정규화") · title(iframe 제목)
+const { src, label, title } = Astro.props
+// '새 탭에서 전체화면'은 데크 원본(/decks/.../index.html, 호스트 오버레이 없음 → 스와이프 불가) 대신
+// 호스트가 제어하는 풀뷰포트 플레이어(/play/?deck=<slug>)로 연다 → 새 탭에서도 스와이프/탭 동작.
+// iOS Safari 는 비디오 외 요소 requestFullscreen 이 제한적이라 이 새 탭이 사실상 전체화면 경로다.
+// slug 는 src(/decks/lectures/<slug>/index.html)에서 추출(ASCII) — URL 에 한글 안 들어감(불변식 #6).
+const deckSlug = (src.match(/\/decks\/lectures\/([^/]+)\//) || [])[1] || ''
+const playHref = deckSlug ? `/play/?deck=${deckSlug}` : src   // 파싱 실패 시 원본으로 폴백(방어)
+---
+<div class="deck-shell">
+  <div class="deck-toolbar">
+    <div class="dt-title"><span class="badge badge--slide">슬라이드</span> {label}</div>
+    <div class="dt-actions">
+      <a class="btn btn--brand-soft btn--sm" href={playHref} target="_blank" rel="noopener">새 탭에서 전체화면 ⤢</a>
+    </div>
+  </div>
+
+  <div class="deck-stage">
+    <div class="deck-frame">
+      <div class="deck-scaler">
+        <iframe src={src} title={title} allowfullscreen></iframe>
+      </div>
+      <div class="deck-gesture" data-deck-gesture aria-hidden="true"></div>
+      {/* F19: 로딩 인디케이터 — 슬라이드 로드 전 흰 프레임 글레어(특히 다크)를 가림. deck-control.js 가 데크 준비되면 숨김. */}
+      <div class="deck-loading" data-deck-loading><span class="spinner" aria-hidden="true"></span><span class="dl-txt">슬라이드 불러오는 중…</span></div>
+      {/* F44: 무JS 환경 — 데크 엔진은 JS 의존이라 빈 박스로 뜨고 로딩 스피너가 영영 돈다. 스피너 위를 덮어 기대를 관리. */}
+      <noscript><div class="deck-noscript">슬라이드 보기는 자바스크립트가 필요해요. 브라우저에서 자바스크립트를 켠 뒤 새로고침해 주세요.</div></noscript>
+    </div>
+  </div>
+
+  <div class="deck-controls" role="group" aria-label="슬라이드 이동">
+    <button class="deck-nav-btn" data-deck-prev type="button" aria-label="이전 슬라이드"><span class="ar">◀</span> <span class="lbl">이전</span></button>
+    <div class="deck-counter" aria-live="polite"><b data-deck-current>1</b><span class="sl">/</span><span data-deck-total>–</span></div>
+    <button class="deck-nav-btn" data-deck-next type="button" aria-label="다음 슬라이드"><span class="lbl">다음</span> <span class="ar">▶</span></button>
+    <button class="deck-fs-btn" data-deck-fullscreen type="button" aria-label="전체화면으로 보기" title="전체화면">⤢</button>
+  </div>
+
+  <div class="deck-help">
+    <span class="help-desk">키보드 ← / → 로 이동 · 아래 버튼으로도 넘길 수 있어요 · 데크는 1024×768 고정(주변 프레임만 반응형)</span>
+    <span class="help-touch">좌·우로 밀거나(스와이프) 좌·우를 탭하거나 아래 ◀ ▶ 버튼으로 넘기세요 · 글자가 작으면 ⤢ 전체화면 후 가로로 돌려 보세요</span>
+  </div>
+</div>
+
+<script>
+  // 데크 컨트롤은 공용 모듈로 추출됨(플레이어 라우트 /play/ 와 공유). 데크 엔진은 비수정 — 동일 출처 API 만 사용.
+  import { initDeck } from '../scripts/deck-control.js'
+  document.querySelectorAll('.deck-shell').forEach(initDeck)
+</script>

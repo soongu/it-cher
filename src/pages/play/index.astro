@@ -1,0 +1,269 @@
+---
+// 풀뷰포트 데크 플레이어 — DeckEmbed 의 '새 탭에서 전체화면 ⤢' 목적지(/play/?deck=<slug>).
+// 왜 별도 라우트인가: 데크 원본(/decks/.../index.html)엔 호스트 제스처 오버레이가 없어 스와이프가 안 된다.
+//   iOS Safari 는 비디오 외 요소 requestFullscreen 이 제한적이라, iPhone 에선 이 '풀뷰포트 새 탭'이
+//   현실적 전체화면이다. 여기서 host 오버레이(.deck-gesture)를 얹어 새 탭에서도 스와이프/탭이 동작한다.
+// 정적 사이트라 데크는 ?deck=<slug> 쿼리로 런타임 선택 → 빌드타임엔 slug→라벨 맵만 심고,
+//   클라이언트가 slug 를 검증(^[a-z0-9-]+$ + manifest 존재)한 뒤 iframe.src 를 주입한다(경로탈출·외부 iframe 차단).
+// 사이트 헤더/푸터(Base)는 의도적으로 안 씀 — 몰입형 전체화면. 데크 엔진/doc.css 의 .deck-* 클래스는 재사용.
+import '../../styles/brand.css'
+import '../../styles/doc.css'
+import fs from 'node:fs'
+import path from 'node:path'
+
+// 데크 manifest → { slug: { label, next } }. label="N강 · 주제"(cpe)/"N부 · 주제"(sqld) — 한글 라벨은 URL 이 아닌 본문 텍스트로만 쓰임(불변식 #6 안전).
+// F20: next = 같은 트랙(kind) 내 num 순 '다음 데크' slug(없으면 null). manifest 엔 deck-ready 데크만 있으므로
+//   준비중 강은 자동 건너뜀(진도/페이저/완주배너와 동일 집합). num 은 cpe 전역 1~59·sqld 1~5(정렬키).
+let manifest = []
+try { manifest = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'public', 'decks', 'manifest.json'), 'utf8')) } catch {}
+const byKind = {}
+manifest.filter((d) => d && d.slug).forEach((d) => { (byKind[d.kind] = byKind[d.kind] || []).push(d) })
+Object.keys(byKind).forEach((k) => byKind[k].sort((a, b) => a.num - b.num))
+const DECK_LABELS = {}
+Object.keys(byKind).forEach((k) => byKind[k].forEach((d, i) => {
+  const nx = byKind[k][i + 1]
+  DECK_LABELS[d.slug] = {
+    label: d.kind === 'sqld' ? `${d.num}부 · ${d.topic}` : `${d.num}강 · ${d.topic}`,
+    next: nx ? nx.slug : null,
+  }
+}))
+// '<' 만 이스케이프해 </script> 종료 토큰이 새지 않게(라벨엔 '<' 없음, 방어용) — Base.astro 와 동일 패턴.
+const labelsJson = JSON.stringify(DECK_LABELS).replace(/</g, '\\u003c')
+---
+<!doctype html>
+<html lang="ko" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>슬라이드 전체화면 — it-cher</title>
+  {/* 기능용 셸이라 색인 제외(콘텐츠는 cert 강 상세에 있음). */}
+  <meta name="robots" content="noindex,follow" />
+  <link rel="icon" type="image/png" href="/img/logo-mark.png" />
+  <link rel="apple-touch-icon" href="/img/logo-mark.png" />
+  {/* 무플래시 테마 복원 — 페인트 전에 적용(상단/하단 바가 사용자 테마를 따르도록). */}
+  <script is:inline>try{var t=localStorage.getItem('hc-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  {/* H8: dynamic-subset(가변폰트) — Base.astro 와 동일. play 는 자체 head 라 따로 교체. */}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+  {/* slug→라벨 맵(검증 + 라벨 표시용). application/json 이라 JSON-LD 게이트와 무관. */}
+  <script type="application/json" id="deck-labels" is:inline set:html={labelsJson} />
+</head>
+<body class="play-body" data-pagefind-ignore>
+  <div class="player-shell" data-player-shell>
+    <div class="player-bar">
+      <a class="player-back" href="/cert/" data-player-back aria-label="강의로 돌아가기">‹ <span class="pb-txt">돌아가기</span></a>
+      <span class="player-label" data-player-label>슬라이드</span>
+      <span class="deck-counter" aria-live="polite"><b data-deck-current>1</b><span class="sl">/</span><span data-deck-total>–</span></span>
+    </div>
+
+    <div class="player-stage">
+      <div class="deck-frame">
+        <div class="deck-scaler">
+          <iframe data-player-iframe title="슬라이드" allowfullscreen></iframe>
+        </div>
+        <div class="deck-gesture" data-deck-gesture aria-hidden="true"></div>
+        {/* F19: 로딩 인디케이터 — deck-control.js 가 데크 준비되면 숨김. */}
+        <div class="deck-loading" data-deck-loading><span class="spinner" aria-hidden="true"></span><span class="dl-txt">슬라이드 불러오는 중…</span></div>
+        {/* F44: 무JS — slug 미주입으로 빈 iframe + 영영 도는 스피너를 덮어 기대 관리(DeckEmbed 와 동일 문구). */}
+        <noscript><div class="deck-noscript">슬라이드 보기는 자바스크립트가 필요해요. 브라우저에서 자바스크립트를 켠 뒤 새로고침해 주세요.</div></noscript>
+      </div>
+      {/* F20: 마지막 슬라이드 도달 시 노출 — 같은 트랙 다음 강으로 동일 탭 이동(JS 가 href·표시 토글). 트랙 끝이면 숨김 유지. */}
+      <a class="player-next-deck" data-player-next-deck hidden href="#"><span class="pnd-txt">다음 강</span> <span class="pnd-ar" aria-hidden="true">→</span></a>
+    </div>
+
+    <div class="player-controls" role="group" aria-label="슬라이드 이동">
+      <button class="deck-nav-btn" data-deck-prev type="button" aria-label="이전 슬라이드"><span class="ar">◀</span> <span class="lbl">이전</span></button>
+      <button class="deck-nav-btn" data-deck-next type="button" aria-label="다음 슬라이드"><span class="lbl">다음</span> <span class="ar">▶</span></button>
+    </div>
+  </div>
+
+  {/* C1: 세로 모바일 첫 진입 힌트 — '가로로 돌리면 더 크게'(JS 가 세로·터치·세션1회 조건으로 노출). */}
+  <div class="rotate-hint" data-rotate-hint hidden>
+    <span class="rh-ico" aria-hidden="true">⤢</span>
+    <span class="rh-txt">가로로 돌리면 슬라이드가 더 크게 보여요</span>
+    <button class="rh-close" type="button" data-rotate-close aria-label="힌트 닫기">✕</button>
+  </div>
+
+  {/* 잘못된/모르는 ?deck= 일 때 노출(JS 가 토글). */}
+  <div class="player-error" data-player-error hidden>
+    <div class="pe-card">
+      <img src="/img/logo-mark.png" alt="" width="44" height="44" />
+      <p class="pe-title">슬라이드를 찾을 수 없어요</p>
+      <p class="pe-sub">주소가 올바르지 않거나 아직 준비되지 않은 슬라이드예요.</p>
+      <a class="btn" href="/cert/">자격증 슬라이드 보러가기 →</a>
+    </div>
+  </div>
+
+  <script>
+    import { initDeck } from '../../scripts/deck-control.js'
+
+    const VALID = /^[a-z0-9-]+$/
+    const shell = document.querySelector('[data-player-shell]')
+    const iframe = shell && shell.querySelector('[data-player-iframe]')
+    const labelEl = shell && shell.querySelector('[data-player-label]')
+    const backLink = shell && shell.querySelector('[data-player-back]')
+    const errorBox = document.querySelector('[data-player-error]')
+
+    let LABELS = {}
+    try { LABELS = JSON.parse(document.getElementById('deck-labels').textContent || '{}') } catch (e) {}
+
+    // slug(cpe-s4-35 / sqld-1) → 원 강의 상세 경로 역산(동일탭 '돌아가기' — 새 탭이라 history.back/window.close 는 iOS 에서 불안정).
+    const backHrefFor = (s) => {
+      let m = s.match(/^cpe-s(\d+)-(\d+)$/); if (m) return `/cert/cpe/written/theory/s${m[1]}/${m[2]}/`
+      m = s.match(/^sqld-(\d+)$/); if (m) return `/cert/sqld/practice/${m[1]}/`
+      return '/cert/'
+    }
+
+    const params = new URLSearchParams(location.search)
+    const slug = params.get('deck') || ''
+
+    if (!shell || !iframe || !VALID.test(slug) || !LABELS[slug]) {
+      if (shell) shell.hidden = true
+      if (errorBox) errorBox.hidden = false
+      document.title = '슬라이드를 찾을 수 없어요 — it-cher'
+    } else {
+      const entry = LABELS[slug]                 // F20: { label, next }
+      const label = entry.label
+      const nextSlug = entry.next
+      if (labelEl) labelEl.textContent = label
+      document.title = `${label} — 전체화면 · it-cher`
+      if (backLink) backLink.setAttribute('href', backHrefFor(slug))
+      iframe.title = label
+      iframe.src = `/decks/lectures/${slug}/index.html`   // 동일 출처·ASCII slug — 검증 통과분만 주입
+      initDeck(shell)   // 데크 제어(공용): fit·카운터·키보드·스와이프/탭·prev/next 바인딩
+
+      // F20: 마지막 슬라이드(다음 버튼 비활성) 도달 시 '다음 강 →' 노출 → 같은 트랙 다음 데크(동일 탭).
+      //   deck-control 내부를 건드리지 않고 data-deck-next 의 disabled 토글만 관찰(되돌아가면 자동 숨김). 트랙 끝이면 next 없어 미설정.
+      const nextDeckBtn = document.querySelector('[data-player-next-deck]')
+      const deckNext = shell.querySelector('[data-deck-next]')
+      if (nextDeckBtn && deckNext && nextSlug) {
+        nextDeckBtn.setAttribute('href', `/play/?deck=${nextSlug}`)
+        const syncNextDeck = () => { nextDeckBtn.hidden = !deckNext.disabled }
+        new MutationObserver(syncNextDeck).observe(deckNext, { attributes: true, attributeFilter: ['disabled'] })
+        syncNextDeck()
+      }
+
+      // C1: 가로·저높이(폰 가로)에선 상단/하단 바를 반투명 오버레이로 띄우고 자동 숨김 → stage 가 풀뷰포트(slide +48%).
+      //   상호작용(탭·스와이프·키)마다 컨트롤을 다시 보이고 2.6s 뒤 숨김(비디오 플레이어 패턴). 세로/데스크톱은 항상 표시.
+      const landscapeMQ = window.matchMedia('(orientation: landscape) and (max-height: 480px)')
+      let hideTimer = null
+      const showControls = () => {
+        shell.classList.remove('controls-hidden')
+        clearTimeout(hideTimer)
+        if (landscapeMQ.matches) hideTimer = setTimeout(() => shell.classList.add('controls-hidden'), 2600)
+      }
+      const syncControlsMode = () => {
+        clearTimeout(hideTimer)
+        if (landscapeMQ.matches) showControls()
+        else shell.classList.remove('controls-hidden')
+      }
+      landscapeMQ.addEventListener('change', syncControlsMode)
+      ;['pointerdown', 'keydown'].forEach((ev) => document.addEventListener(ev, showControls, { passive: true }))
+      syncControlsMode()
+
+      // C1: 세로 모바일 첫 진입 시 '가로로 돌리면 더 큼' 힌트(세션당 1회, 자동 6s 페이드 또는 닫기).
+      const hint = document.querySelector('[data-rotate-hint]')
+      if (hint) {
+        let seen = null
+        try { seen = sessionStorage.getItem('itcher:rotate-hint') } catch (e) {}
+        const phonePortrait = window.matchMedia('(orientation: portrait) and (max-width: 768px)').matches
+        if (phonePortrait && !seen) {
+          hint.hidden = false
+          const dismiss = () => { hint.hidden = true; try { sessionStorage.setItem('itcher:rotate-hint', '1') } catch (e) {} }
+          const btn = hint.querySelector('[data-rotate-close]')
+          if (btn) btn.addEventListener('click', dismiss)
+          setTimeout(dismiss, 6000)
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* B3: 풀뷰포트 슬라이드 플레이어는 테마와 무관하게 항상 어두운 무대색(#0b0b0c) — 토큰 아님(의도). */
+    html, body { margin: 0; height: 100%; }
+    .play-body { background: #0b0b0c; overflow: hidden; overscroll-behavior: none; }
+
+    /* 풀뷰포트 셸: 상단바 + 데크(가변) + 하단 컨트롤. position:fixed 로 iOS 동적 뷰포트 대응. */
+    .player-shell { position: fixed; inset: 0; display: flex; flex-direction: column; background: #0b0b0c; }
+
+    .player-bar {
+      flex: 0 0 auto; display: flex; align-items: center; gap: 12px;
+      padding: max(8px, env(safe-area-inset-top)) max(14px, env(safe-area-inset-right)) 8px max(14px, env(safe-area-inset-left));
+      background: var(--surface-card); border-bottom: 1px solid var(--border-default);
+    }
+    .player-back {
+      flex: 0 0 auto; display: inline-flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 14px;
+      font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--text-strong); text-decoration: none;
+      background: var(--surface-subtle); border: 1px solid var(--border-default); border-radius: var(--r-md);
+    }
+    .player-back:hover { background: var(--surface-card); border-color: var(--border-strong); }
+    .player-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; font-weight: var(--fw-semibold); color: var(--text-strong); font-size: var(--fs-sm); }
+    .player-bar .deck-counter { flex: 0 0 auto; min-width: 64px; text-align: right; }
+
+    .player-stage { flex: 1 1 auto; position: relative; min-height: 0; }
+    /* 데크 프레임이 스테이지를 가득 채우고(레터박스), scaler 는 중앙정렬 contain — doc.css 의 :fullscreen 규칙을 미러. */
+    .player-stage .deck-frame { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; aspect-ratio: auto; border-radius: 0; box-shadow: none; background: #000; }
+    .player-stage .deck-scaler { top: 50%; left: 50%; transform-origin: center center; transform: translate(-50%, -50%) scale(var(--deck-scale, 1)); }
+
+    .player-controls {
+      flex: 0 0 auto; display: flex; gap: var(--sp-2);
+      padding: 8px max(14px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(14px, env(safe-area-inset-left));
+      background: var(--surface-card); border-top: 1px solid var(--border-default);
+    }
+    .player-controls .deck-nav-btn { flex: 1 1 0; }
+
+    /* F20: 마지막 슬라이드 '다음 강' CTA — 스테이지 우하단(영상 플레이어 '다음 화' 패턴). 보일 때만(JS 가 hidden 토글). */
+    .player-next-deck {
+      position: absolute; right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom));
+      z-index: 8; display: inline-flex; align-items: center; gap: 6px;
+      padding: 11px 18px; border-radius: var(--r-full);
+      background: var(--brand); color: var(--brand-fg); font-weight: var(--fw-bold); font-size: var(--fs-sm);
+      text-decoration: none; box-shadow: var(--shadow-lg); animation: pnd-in .22s var(--ease);
+    }
+    .player-next-deck:hover { background: var(--brand-hover); }
+    .player-next-deck[hidden] { display: none; }
+    @keyframes pnd-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    /* 에러 카드(잘못된 slug) */
+    .player-error { position: fixed; inset: 0; display: grid; place-items: center; padding: var(--sp-5); background: #0b0b0c; }
+    .player-error[hidden] { display: none; }
+    .pe-card { display: grid; justify-items: center; gap: var(--sp-3); max-width: 360px; text-align: center; padding: var(--sp-6); background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--r-lg); box-shadow: var(--shadow-lg); }
+    .pe-title { margin: 0; font-size: var(--fs-h4, 1.125rem); font-weight: var(--fw-bold); color: var(--text-strong); }
+    .pe-sub { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); }
+
+    /* 좁은 화면: '돌아가기' 글자는 숨기고 ‹ 화살표만(라벨 공간 확보). */
+    @media (max-width: 480px) { .player-back .pb-txt { display: none; } }
+
+    /* C1: 회전 힌트 토스트(세로 모바일 첫 진입). 가로에선 불필요 → 숨김. */
+    .rotate-hint {
+      position: fixed; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom)); transform: translateX(-50%);
+      z-index: 20; display: inline-flex; align-items: center; gap: 10px;
+      max-width: calc(100vw - 28px); padding: 10px 12px 10px 16px;
+      background: rgba(16,18,22,0.92); color: #fff; border-radius: var(--r-xl); box-shadow: var(--shadow-lg);
+      font-size: var(--fs-sm); line-height: 1.35; word-break: keep-all;  /* 한국어: 음절 중간 줄바꿈 방지(어절 단위) */
+    }
+    .rotate-hint[hidden] { display: none; }
+    .rotate-hint .rh-ico { font-size: 16px; }
+    .rotate-hint .rh-close { flex: 0 0 auto; background: none; border: 0; color: rgba(255,255,255,0.65); font-size: 14px; line-height: 1; cursor: pointer; padding: 4px 6px; }
+    .rotate-hint .rh-close:hover { color: #fff; }
+    @media (orientation: landscape) { .rotate-hint { display: none !important; } }
+
+    /* C1: 가로·저높이(폰 가로) — 상단/하단 바를 반투명 오버레이로 띄워 stage 가 풀뷰포트를 쓰게 한다.
+       세로 컨트롤 잠식(≈120px) 제거 → 슬라이드 scale +48%. .controls-hidden(JS) 일 때 자동 숨김(탭으로 복귀). */
+    @media (orientation: landscape) and (max-height: 480px) {
+      .player-stage { position: absolute; inset: 0; }
+      .player-bar, .player-controls {
+        position: absolute; left: 0; right: 0; z-index: 6; border: 0; color: #fff;
+        background: rgba(16,18,22,0.55); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+        transition: opacity .22s var(--ease), transform .22s var(--ease);
+      }
+      .player-bar { top: 0; }
+      .player-controls { bottom: 0; }
+      .player-bar .player-label, .player-bar .deck-counter, .player-bar .deck-counter b { color: #fff; }
+      .player-back { background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.28); color: #fff; }
+      .player-shell.controls-hidden .player-bar { opacity: 0; transform: translateY(-100%); pointer-events: none; }
+      .player-shell.controls-hidden .player-controls { opacity: 0; transform: translateY(100%); pointer-events: none; }
+    }
+  </style>
+</body>
+</html>

@@ -1,0 +1,91 @@
+---
+import Base from '../../../../../../../layouts/Base.astro'
+import Crumbs from '../../../../../../../components/Crumbs.astro'
+import { cpeSubjects } from '../../../../../../../lib/content.mjs'
+import { FUNNELS } from '../../../../../../../lib/links.mjs'
+import FunnelCta from '../../../../../../../components/FunnelCta.astro'
+import Pager from '../../../../../../../components/Pager.astro'
+import LecProgress from '../../../../../../../components/LecProgress.astro'
+import DeckEmbed from '../../../../../../../components/DeckEmbed.astro'
+import SlideStudyGuide from '../../../../../../../components/SlideStudyGuide.astro'
+import CompletionBanner from '../../../../../../../components/CompletionBanner.astro'
+
+export function getStaticPaths() {
+  const paths = []
+  // 데크(슬라이드)가 준비된 강만 상세 페이지를 만든다 — 빈 '준비중' 페이지를 생성하지 않아 헛걸음 0.
+  // 페이저(앞뒤 강)·위치·진도 모두 이 deck-ready 집합 기준 → 준비중 강을 건너뛰고, 목록(클릭 가능 강)·
+  // 조망 ProgressGroup 과 같은 집합으로 정합. 준비중 강은 목록에 비활성 행으로만 노출(클릭 불가).
+  // H6(F06): 과목 경계에서 끊기지 않게 — 각 과목의 마지막 강(next 없음)에 '다음 과목' 완주 배너를 단다.
+  //   nextGroup = 슬라이드 준비된 강을 가진 '다음 과목'의 첫 강(준비중뿐인 과목은 건너뜀). 마지막 과목이면 null → 조망(/map) 배너.
+  const subjects = cpeSubjects().map((s) => ({ ...s, ready: s.lectures.filter((l) => l.deck) }))
+  subjects.forEach((s, si) => {
+    const ready = s.ready
+    const mk = (x) => (x ? { href: `/cert/cpe/written/theory/${s.slug}/${x.slug}/`, label: `${x.num}강 · ${x.topic}` } : null)
+    let nextGroup = null
+    for (let j = si + 1; j < subjects.length; j++) {
+      const f = subjects[j].ready[0]
+      if (f) { nextGroup = { href: `/cert/cpe/written/theory/${subjects[j].slug}/${f.slug}/`, label: subjects[j].label }; break }
+    }
+    ready.forEach((l, i) => {
+      paths.push({ params: { subject: s.slug, lecture: l.slug }, props: { subjectSlug: s.slug, subjectLabel: s.label, lec: l, prev: mk(ready[i - 1]), next: mk(ready[i + 1]), nextGroup, index: i + 1, total: ready.length } })
+    })
+  })
+  return paths
+}
+
+const { subjectSlug, subjectLabel, lec, prev, next, nextGroup, index, total } = Astro.props
+const lecKey = `/cert/cpe/written/theory/${subjectSlug}/${lec.slug}/`
+const deckSrc = `${lec.deck}/index.html`
+// 구조화데이터: 무료 Course(제목/메타만 — 강의대본 본문은 포함 안 함, 불변식 #2).
+const course = {
+  '@context': 'https://schema.org', '@type': 'Course',
+  name: `정보처리기사 ${subjectLabel} ${lec.num}강 · ${lec.topic}`,
+  description: `정보처리기사 필기 이론 ${subjectLabel} ${lec.num}강 ${lec.topic} 슬라이드`,
+  url: `https://it-cher.com${lecKey}`,
+  inLanguage: 'ko-KR', isAccessibleForFree: true,
+  provider: { '@type': 'EducationalOrganization', name: 'it-cher', '@id': 'https://it-cher.com/#org' },
+}
+---
+<Base title={`${lec.num}강 · ${lec.topic} — 정보처리기사 필기 이론 · it-cher`} desc={`정보처리기사 필기 이론 ${subjectLabel} ${lec.num}강 ${lec.topic} 슬라이드`} ogType="article" jsonLd={course}>
+  <div class="slide-page">
+    <Crumbs trail={[{ href: '/cert/', label: '자격증' }, { href: '/cert/cpe/', label: '정보처리기사' }, { href: '/cert/cpe/written/', label: '필기' }, { href: '/cert/cpe/written/theory/', label: '이론' }, { href: `/cert/cpe/written/theory/${subjectSlug}/`, label: subjectLabel }, { label: `${lec.num}강` }]} />
+
+    {/* 검색 색인 대상은 이 제목/메타뿐(data-pagefind-body) — 강의대본 본문·슬라이드 내용은 색인 안 됨(불변식 #2). */}
+    <header class="slide-head" data-pagefind-body>
+      <h1>{lec.num}강 · {lec.topic}</h1>
+      <p class="slide-sub">정보처리기사 · 필기 이론 · {subjectLabel} · 슬라이드 강의</p>
+    </header>
+
+    {/* F21: "전체 N강 중 K번째"(데크 컨트롤바의 슬라이드 카운터 "1/41"과 단위가 안 겹치게 — 예전 "슬라이드 N개"는 충돌).
+        index/total 은 deck-ready 집합 기준이라 "번째"로 표기(강 번호와도 헷갈리지 않게). */}
+    <LecProgress index={index} total={total} totalUnit="강" posUnit="번째" groupLabel={subjectLabel} lecKey={lecKey} lecLabel={`${lec.num}강 · ${lec.topic}`} />
+
+    {/* H1: 슬라이드(=핵심 콘텐츠)를 먼저, 학습 가이드는 데크 아래로 + 기본 접힘 — 가이드가 데크를 폴드 밖으로 밀어내던 문제 해소(F02·F07·F18). */}
+    <DeckEmbed src={deckSrc} label={`${lec.num}강 · ${lec.topic}`} title={lec.topic} />
+
+    <SlideStudyGuide topic={lec.topic} context={`정보처리기사 · 필기 이론 · ${subjectLabel}`} tip="필기는 객관식이에요. 용어를 통째로 외우기보다, 보기에서 ‘고를 수 있을 만큼’ 익히는 데 집중하세요." eduwill={true} />
+
+    <Pager prev={prev} next={next} list={{ href: `/cert/cpe/written/theory/${subjectSlug}/`, label: subjectLabel }} />
+
+    {/* H6(F06): 과목 마지막 강에서 다음 과목으로 이어주는 완주 배너(코딩 트랙 패턴 재사용) — 과목 경계 막다른 길 해소. */}
+    {!next && (nextGroup
+      ? <CompletionBanner href={nextGroup.href} eyebrow="이 과목을 끝까지 봤어요 🎉 다음 과목으로" title={`${nextGroup.label} →`} />
+      : <CompletionBanner href="/map/" eyebrow="정보처리기사 필기 이론을 끝까지 봤어요 🎉" title="다른 트랙도 둘러보기 →" />)}
+
+    <span data-lec-end aria-hidden="true"></span>
+    <div class="cta-band">
+      <p class="eyebrow">합격까지</p>
+      <h3 class="t-h3">정처기·SQLD, 혼자 막막하다면</h3>
+      <p>초개인화 학습앱 Klue와 에듀윌 온라인강의로 합격까지 이어가세요.</p>
+      {/* F22: 준비중 Klue 동안은 라이브 채널(에듀윌)을 primary·앞으로. Klue 런칭(comingSoon 제거) 시 자동 복귀. */}
+      <div class="cta-row">{FUNNELS.klue.comingSoon
+        ? <><FunnelCta funnel={FUNNELS.eduwill} label="에듀윌 강의" /><FunnelCta funnel={FUNNELS.klue} label="Klue 앱" /></>
+        : <><FunnelCta funnel={FUNNELS.klue} label="Klue 앱" /><FunnelCta funnel={FUNNELS.eduwill} label="에듀윌 강의" class="btn btn--secondary" /></>}</div>
+    </div>
+  </div>
+</Base>
+
+<style>
+  .slide-page { max-width: 1180px; margin-inline: auto; padding: var(--sp-6) var(--sp-5) 0; }
+  @media (max-width: 760px) { .slide-page { padding-inline: var(--sp-3); } }
+</style>

@@ -1,0 +1,7 @@
+# it-cher — 비전공자를 위한 IT 자격증·코딩 무료 강의자료
+# 전체 공개 사이트라 모든 크롤러를 허용한다. 데크(슬라이드)도 공개 학생 자료라 색인 허용.
+# 강의대본 본문은 페이지가 아예 없어(파일명/제목만 사용) 크롤 대상 URL 자체가 존재하지 않는다.
+User-agent: *
+Allow: /
+
+Sitemap: https://it-cher.com/sitemap-index.xml

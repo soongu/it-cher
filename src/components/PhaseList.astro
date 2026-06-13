@@ -1,0 +1,94 @@
+---
+// 코딩 강의 목록을 커리큘럼 Phase/Category 로 그룹화해 렌더.
+// data = content.mjs topicGroups(dir) 결과 · baseHref = `/code/{bucket}/{topic}/`.
+// 빈 group(아직 안 쓰여진 Phase)은 흐린 '준비중' 줄로 로드맵을 보여준다(트랙 전체 흐름 한눈에).
+// 강 행 키(data-read-key)·href 는 기존 규칙 그대로 → 진도/pagefind 영향 0.
+const { data, baseHref } = Astro.props
+const rangeLabel = (r) => (r ? (r[0] === r[1] ? `Day ${r[0]}` : `Day ${r[0]}~${r[1]}`) : null)
+---
+<div class="phase-wrap">
+  {data.tiers.map((tier) => (
+    <section class="phase-tier">
+      {tier.label && <h2 class="phase-tier-h">{tier.label}</h2>}
+      {tier.groups.map((g) => {
+        const has = g.lectures.length > 0
+        return (
+          <div class:list={['phase-group', { 'is-soon': !has }]}>
+            {g.label && (
+              <div class="phase-head">
+                <div class="phase-head-main">
+                  <span class="phase-caret">▸</span>
+                  <span class="phase-label">{g.label}</span>
+                  {g.desc && <span class="phase-desc">{g.desc}</span>}
+                </div>
+                <span class="phase-meta">
+                  {rangeLabel(g.range) && <span class="phase-range">{rangeLabel(g.range)}</span>}
+                  {has
+                    ? <span class="phase-count">{g.lectures.length}강</span>
+                    : <span class="badge badge--planned"><span class="dot"></span>준비중</span>}
+                </span>
+              </div>
+            )}
+            {has && (
+              <div class="lec-list">
+                {g.lectures.map((l) => {
+                  const href = `${baseHref}${l.slug}/`
+                  return (
+                    <a class="lec-row" href={href} data-read-key={href}>
+                      <span class="lec-num">{l.tag}</span>
+                      <span class="lec-main"><span class="lec-title">{l.title}</span><span class="lec-sub">{l.summary || `읽는 데 ${l.minutes}분`}</span></span>
+                      <span class="lec-meta">
+                        {l.summary && (
+                          <span class="lec-time" aria-label={`읽는 데 약 ${l.minutes}분`}>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>{l.minutes}분
+                          </span>
+                        )}
+                        <span class="row-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>읽음</span>
+                        <span class="badge badge--doc">문서</span>
+                      </span>
+                    </a>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </section>
+  ))}
+</div>
+
+<style>
+  .phase-tier { margin-bottom: var(--sp-7); }
+  .phase-tier:last-child { margin-bottom: 0; }
+  .phase-tier-h {
+    font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: .08em; text-transform: uppercase;
+    color: var(--text-faint); margin: 0 0 var(--sp-4); padding-bottom: var(--sp-2);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .phase-group { margin-bottom: var(--sp-5); }
+  .phase-group:last-child { margin-bottom: 0; }
+  .phase-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--sp-3); margin-bottom: var(--sp-3); flex-wrap: wrap; }
+  .phase-head-main { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; min-width: 0; }
+  .phase-caret { color: var(--brand-text); font-weight: var(--fw-bold); }
+  .phase-label { font-size: var(--fs-h4); font-weight: var(--fw-semibold); color: var(--text-strong); }
+  .phase-desc { font-size: var(--fs-sm); color: var(--text-muted); }
+  .phase-meta { display: flex; align-items: center; gap: 8px; flex: none; }
+  .phase-range { font-size: var(--fs-xs); color: var(--text-faint); font-variant-numeric: tabular-nums; }
+  .phase-count { font-size: var(--fs-xs); color: var(--text-faint); }
+  .phase-group.is-soon .phase-label { color: var(--text-muted); }
+  .phase-group.is-soon .phase-caret { color: var(--text-faint); }
+
+  /* 강 번호 칸을 모듈 태그(A-1 / Day 14.5)에 맞게 넓힘 — 전역 .lec-row(44px)를 스코프 특이도로 오버라이드 */
+  .lec-row { grid-template-columns: 60px 1fr auto; align-items: center; }
+  .lec-num { text-align: left; font-size: var(--fs-xs); white-space: nowrap; align-self: start; margin-top: 1px; }
+  /* 제목+한줄요약 칸: min-width:0 이라야 요약 클램프가 동작 */
+  .lec-main { min-width: 0; }
+  /* 한 줄 요약: 데스크톱 1줄, 좁은 화면 최대 2줄까지 보이고 그 이상은 말줄임(입문자에겐 잘림보다 노출이 우선이라 2줄 허용) */
+  .lec-sub { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+  /* 읽기 시간 칩: 요약이 부제 자리를 차지하므로 시간은 우측 메타로 이동(흐린 보조 정보) */
+  .lec-time { display: inline-flex; align-items: center; gap: 3px; flex: none; font-size: var(--fs-xs); color: var(--text-faint); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .lec-time svg { width: 13px; height: 13px; }
+  /* 좁은 화면에선 시간 칩을 숨겨 제목/요약 공간 확보 */
+  @media (max-width: 560px) { .lec-time { display: none; } }
+</style>

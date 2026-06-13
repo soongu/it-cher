@@ -1,0 +1,49 @@
+---
+// 이전/다음 강 페이저 — 막다른 길 방지 (STUDENT-EXPERIENCE-CHECKLIST ② 🔴)
+// 같은 토픽/과목/파트의 '정렬 배열' 앞뒤 항목을 받아 본문 하단(유료 CTA 위)에 렌더한다.
+// prev·next: { href, label } 또는 null. 둘 다 null이면 아무것도 렌더하지 않음(단일 강 등).
+// 한쪽만 있을 때(첫·마지막 강)는 그 카드가 grid auto-fit 으로 한 줄을 꽉 채운다(전폭) — 빈 칸을 두지 않는다.
+// list: { href, label } (선택) — 긴 문서 하단에서 토픽/과목 '전체 목록'으로 복귀(F40). prev/next 아래 별도 행.
+const { prev = null, next = null, list = null } = Astro.props
+---
+{(prev || next) && (
+  <nav class="pager" aria-label="강의 이동">
+    {prev && (
+      <a class="pager-link is-prev" href={prev.href} rel="prev">
+        <span class="pager-dir">← 이전 강</span>
+        <span class="pager-title">{prev.label}</span>
+      </a>
+    )}
+    {next && (
+      <a class="pager-link is-next" href={next.href} rel="next">
+        <span class="pager-dir">다음 강 →</span>
+        <span class="pager-title">{next.label}</span>
+      </a>
+    )}
+  </nav>
+)}
+{list && (
+  <a class="pager-list" href={list.href}>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1.2"/><circle cx="4" cy="12" r="1.2"/><circle cx="4" cy="18" r="1.2"/></svg>
+    <span>전체 목록 <b>{list.label}</b></span>
+  </a>
+)}
+
+<style>
+  .pager { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: var(--sp-3); margin: var(--sp-7) 0 var(--sp-6); }
+  .pager-link { display: flex; flex-direction: column; gap: 4px; padding: var(--sp-4) var(--sp-5); border: 1px solid var(--border-default); border-radius: var(--r-lg); background: var(--surface-card); min-width: 0; transition: border-color .15s ease, background .15s ease; }
+  a.pager-link:hover { border-color: var(--brand-tint-bd); background: var(--brand-tint); text-decoration: none; }
+  .pager-link.is-next { text-align: right; align-items: flex-end; }
+  .pager-dir { font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--brand-text); letter-spacing: .02em; }
+  .pager-title { font-weight: var(--fw-semibold); color: var(--text-strong); font-size: var(--fs-body); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  /* F40: 페이저 아래 '전체 목록' 복귀 링크 — 긴 문서 끝에서 토픽/과목 목록으로 한 번에. */
+  .pager-list { display: inline-flex; align-items: center; gap: 8px; margin: calc(-1 * var(--sp-3)) 0 var(--sp-6); padding: 10px var(--sp-4); border-radius: var(--r-md); color: var(--text-muted); font-size: var(--fs-sm); min-height: 44px; box-sizing: border-box; }
+  .pager-list:hover { color: var(--brand-text); background: var(--brand-tint); text-decoration: none; }
+  .pager-list svg { flex: none; opacity: .85; }
+  .pager-list b { color: var(--text-strong); font-weight: var(--fw-semibold); }
+  .pager-list:hover b { color: var(--brand-text); }
+  @media (max-width: 560px) {
+    .pager { grid-template-columns: 1fr; }
+    .pager-link.is-next { text-align: left; align-items: flex-start; }
+  }
+</style>

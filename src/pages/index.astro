@@ -1,0 +1,421 @@
+---
+import Base from '../layouts/Base.astro'
+import { codeBuckets, cpeSubjects, sqldParts, CERT_TRACKS } from '../lib/content.mjs'
+import { FUNNELS } from '../lib/links.mjs'
+import FunnelLink from '../components/FunnelLink.astro'
+import Glyph from '../components/Glyph.astro'
+
+const buckets = codeBuckets()
+const cpe = cpeSubjects()
+const sqld = sqldParts()
+
+const codeDocCount = buckets.reduce((n, b) => n + b.topics.reduce((m, t) => m + (t.lectures?.length || 0), 0), 0)
+const certCount = cpe.reduce((n, s) => n + s.lectures.length, 0) + sqld.length
+const totalCount = codeDocCount + certCount
+const round10 = (n) => Math.max(10, Math.floor(n / 10) * 10)
+
+// 코딩 카테고리 카드용 버킷별 문서 수 · 열린 분야 수
+const bucketDocs = (b) => b.topics.reduce((m, t) => m + (t.lectures?.length || 0), 0)
+const liveBuckets = buckets.filter((b) => b.status === 'live').length
+
+// 히어로 비주얼: "AI가 짠 코드의 허점을 기본기로 잡아낸다" — 보안·버그·성능 3예시(읽기·고치기·판단과 정합).
+// 런타임이 grid 스택을 크로스페이드로 순환. 무JS면 첫 슬라이드만 노출(나머지 CSS hidden) → graceful.
+// prefers-reduced-motion이면 자동순환 안 함. 점(dot)으로 수동 전환.
+const aiSlides = [
+  { file: 'user-service.js',
+    code: [
+      '<span class="hc-cmt">// AI가 짜준 코드</span>',
+      '<span class="hk">function</span> getUser(id) {',
+      '  <span class="hk">return</span> db.query(',
+      '    <span class="hs">"...WHERE id="</span> + id  <span class="hc-bad">⚠</span>',
+      '  )',
+      '}',
+    ].join('\n'),
+    q: '잠깐, 이거 <b>SQL 인젝션</b> 아닐까?',
+    a: '— 입력값을 그대로 붙이면 위험해요.' },
+  { file: 'login.js',
+    code: [
+      '<span class="hc-cmt">// AI가 짜준 로그인 코드</span>',
+      '<span class="hk">function</span> login(user) {',
+      '  <span class="hk">if</span> (user.isAdmin <span class="hc-bad">=</span> true) {  <span class="hc-bad">⚠</span>',
+      '    showAdminPage()',
+      '  }',
+      '}',
+    ].join('\n'),
+    q: '<b>= 하나</b>는 비교가 아니라 ‘대입’이에요.',
+    a: '— 이러면 누구나 관리자가 됩니다.' },
+  { file: 'orders.js',
+    code: [
+      '<span class="hc-cmt">// AI가 짜준 코드</span>',
+      '<span class="hk">for</span> (const o of orders) {',
+      '  const u = db.query(  <span class="hc-bad">⚠</span>',
+      '    <span class="hs">"...id="</span> + o.userId)',
+      '  rows.push(u)',
+      '}',
+    ].join('\n'),
+    q: '주문 100개면 쿼리도 <b>100번</b> 날아가요.',
+    a: '— 한 번에 가져오는 게 기본기.' },
+]
+---
+<Base title="it-cher — AI 시대, 비전공자를 위한 코딩 기본기 무료 강의" desc="AI가 코드를 짜주는 시대일수록 필요한 건 기본기. 비전공자도 따라오는 코딩 9개 분야 무료 자료와 정처기·SQLD 슬라이드, 강사 홍순구 포트폴리오.">
+
+  {/* 토스식 스크롤 진입 모션 + 숫자 카운트업(가벼운 폴리시).
+      · JS가 html.reveal-on을 달 때만 [data-reveal]를 숨김 → 무JS면 항상 보임(죽은 콘텐츠 0).
+      · reduced-motion이면 reveal-on 미부여 → 즉시 표시 + 카운트업 생략.
+      · 클래스를 파싱 중 일찍 달아 FOUC 방지 / 관측 누락엔 3초 실패안전(전부 노출). */}
+  <script is:inline>
+    (function () {
+      var d = document, el = d.documentElement;
+      var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (!reduce) el.classList.add('reveal-on');
+      function ready(fn) { if (d.readyState !== 'loading') fn(); else d.addEventListener('DOMContentLoaded', fn); }
+      function reveal(x) { x.classList.add('is-revealed'); }
+      function countUp(c) {
+        var target = parseInt(c.getAttribute('data-count'), 10); if (isNaN(target)) return;
+        var dur = 1100, t0 = null;
+        c.textContent = '0';
+        requestAnimationFrame(function step(ts) {
+          if (t0 === null) t0 = ts;
+          var p = Math.min((ts - t0) / dur, 1), e = 1 - Math.pow(1 - p, 3);
+          c.textContent = String(Math.round(target * e));
+          if (p < 1) requestAnimationFrame(step); else c.textContent = String(target);
+        });
+      }
+      ready(function () {
+        try {
+          var items = [].slice.call(d.querySelectorAll('[data-reveal]'));
+          var counts = [].slice.call(d.querySelectorAll('[data-count]'));
+          if (reduce || !('IntersectionObserver' in window)) { items.forEach(reveal); return; }
+          var io = new IntersectionObserver(function (es) {
+            es.forEach(function (e) { if (e.isIntersecting) { reveal(e.target); io.unobserve(e.target); } });
+          }, { rootMargin: '0px 0px -8% 0px', threshold: 0.1 });
+          items.forEach(function (x) { io.observe(x); });
+          var cio = new IntersectionObserver(function (es) {
+            es.forEach(function (e) { if (e.isIntersecting) { countUp(e.target); cio.unobserve(e.target); } });
+          }, { threshold: 0.6 });
+          counts.forEach(function (x) { cio.observe(x); });
+          setTimeout(function () { items.forEach(reveal); }, 3000);
+        } catch (err) {
+          [].slice.call(d.querySelectorAll('[data-reveal]')).forEach(reveal);
+        }
+      });
+    })();
+  </script>
+
+  <!-- HERO — 공감(질문) → 확신(답) → 행동(CTA) -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div>
+        <span class="badge badge--free">비전공 · 입문 · 가입 없이 무료</span>
+        <h1>“코딩, 이제 AI한테<br>시키면 되는 거<br>아니에요?”</h1>
+        <p class="hero-answer">— 시키려면, 먼저 <em>알아야</em> 합니다.</p>
+        <p class="sub">AI가 짜준 코드가 맞는지 읽고 판단하는 힘, <b>기본기</b>. 비전공자도 따라오게 정리한 무료 자료로 처음부터 차근차근 시작해요.</p>
+        <div class="hero-cta">
+          <a class="btn btn--lg btn--hero" href="/start/">무료로 시작하기 →</a>
+          <a class="btn btn--lg btn--secondary" href="/map/">학습 지도 보기</a>
+        </div>
+        <div class="hero-trust">
+          <div class="ht"><div class="n"><span data-count={round10(totalCount)}>{round10(totalCount)}</span><span class="u">+</span></div><div class="l">공개 자료</div></div>
+          <div class="ht"><div class="n"><span data-count="9">9</span><span class="u">분야</span></div><div class="l">코딩 트랙</div></div>
+          <div class="ht"><div class="n"><span data-count="100">100</span><span class="u">%</span></div><div class="l">무료 공개</div></div>
+        </div>
+      </div>
+      <!-- thesis 일러스트: AI가 짠 코드의 허점을 '기본기 있는 사람'이 잡아낸다 (보안·버그·성능 3예시 순환) -->
+      <div class="hero-vis" data-hv-rotate>
+        <div class="hv-bar"><span class="d"></span><span class="d"></span><span class="d"></span><span class="t" data-hv-file>{aiSlides[0].file}</span><span class="hv-aitag">AI 생성</span></div>
+        <div class="hv-body">
+          <div class="hv-stack">
+            {aiSlides.map((s, idx) => (
+              <div class:list={['hv-slide', { 'is-active': idx === 0 }]} data-file={s.file}>
+                <div class="hv-code" set:html={s.code}></div>
+                <div class="hv-note">
+                  <div class="hv-note-q" set:html={s.q}></div>
+                  <div class="hv-note-a">{s.a}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div class="hv-dots" role="group" aria-label="AI 코드 예시 슬라이드">
+            {aiSlides.map((s, idx) => (
+              <button type="button" class:list={['hv-dot', { 'is-active': idx === 0 }]} aria-label={`예시 ${idx + 1} 보기`} aria-current={idx === 0 ? 'true' : 'false'}></button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY — 확신: AI 시대, 기본기가 무기인 이유 (읽기·고치기·판단) -->
+  <section class="section why">
+    <div class="why-head" data-reveal>
+      <p class="eyebrow">왜 지금, 기본기인가</p>
+      <h2 class="t-h2">AI는 코드를 써주지만,<br><em>판단</em>은 사람의 몫입니다</h2>
+      <p class="why-lede">AI가 코드를 쏟아낼수록, 그걸 다룰 줄 아는 사람과 아닌 사람의 격차는 더 벌어져요. 주니어일수록 기본기가 무기가 되는 이유입니다.</p>
+    </div>
+    <div class="grid grid-3 why-grid">
+      <div class="card card--pad why-card" data-reveal style="--ri:0">
+        <div class="why-ico is-cool"><Glyph name="book" /></div>
+        <h3 class="t-h3">읽는 힘</h3>
+        <p>AI가 쏟아낸 코드를 이해하지 못하면 그대로 믿는 수밖에 없어요. 읽을 수 있어야 비로소 내 것이 됩니다.</p>
+      </div>
+      <div class="card card--pad why-card" data-reveal style="--ri:1">
+        <div class="why-ico is-cool"><Glyph name="terminal" /></div>
+        <h3 class="t-h3">고치는 힘</h3>
+        <p>AI도 틀립니다. 어디가 왜 잘못됐는지 짚어내 고치는 건, 기초를 아는 사람만 할 수 있어요.</p>
+      </div>
+      <div class="card card--pad why-card" data-reveal style="--ri:2">
+        <div class="why-ico is-cool"><Glyph name="award" /></div>
+        <h3 class="t-h3">판단하는 힘</h3>
+        <p>더 빠른 방법, 더 안전한 코드. 여러 답 중 무엇이 옳은지 가리는 눈은 결국 기본기에서 나옵니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- HUB — 무료 자료 허브: 코딩 9분야 (메인) -->
+  <section class="band">
+    <div class="section">
+      <div class="section-head" data-reveal>
+        <div>
+          <p class="eyebrow">무료 학습 자료</p>
+          <h2 class="t-h2">기본기부터 순서대로, 코딩 9개 분야</h2>
+          <p>입문부터 차근차근. 지금 <b>{liveBuckets}개 분야</b>가 열려 있고, 나머지는 커리큘럼 로드맵으로 미리 볼 수 있어요.</p>
+        </div>
+      </div>
+      <div class="grid grid-4">
+        {buckets.map((b, i) => {
+          const docs = bucketDocs(b)
+          const live = b.status === 'live'
+          return (
+            <a class="card card--link cat-card" href={`/code/${b.slug}/`} data-reveal style={`--ri:${i}`}>
+              <div class="cat-top"><div class="cat-ico is-cool"><Glyph name={b.glyph} /></div>
+                {live
+                  ? <span class="badge badge--live"><span class="dot"></span>운영</span>
+                  : <span class="badge badge--planned"><span class="dot"></span>예정</span>}</div>
+              <div><div class="cat-title">{b.label}</div><div class="cat-sub">{b.subtitle}</div></div>
+              <div class="cat-meta">{live ? `문서 ${docs}개` : '준비중 · 로드맵'}</div>
+            </a>
+          )
+        })}
+      </div>
+      <div class="hub-foot" data-reveal>
+        <a class="btn btn--secondary" href="/map/">전체 학습 지도 보기 →</a>
+        <p class="hub-nudge">어디부터 볼지 모르겠다면? <a href="/start/">1분 진단으로 맞춤 추천받기 →</a></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CERT — 자격증 (보조 스트립) -->
+  <section class="section">
+    <div class="cert-strip" data-reveal>
+      <div class="cs-ico"><Glyph name="graduation" /></div>
+      <div class="cs-body">
+        <p class="eyebrow">자격증 시험이 목표라면</p>
+        <h2 class="cs-title">정처기 · SQLD, 핵심만 압축한 정리 슬라이드</h2>
+        <div class="cs-chips">
+          {CERT_TRACKS.map((t) => (
+            <span class:list={['cs-chip', { 'is-soon': t.status !== 'live' }]}>
+              {t.label}
+              {t.status === 'live'
+                ? <span class="badge badge--slide">슬라이드</span>
+                : <span class="badge badge--planned"><span class="dot"></span>예정</span>}
+            </span>
+          ))}
+        </div>
+      </div>
+      <a class="btn btn--secondary cs-cta" href="/cert/">자격증 자료 보기 →</a>
+    </div>
+  </section>
+
+  <!-- PORTFOLIO — 만든 사람 -->
+  <section class="band">
+    <div class="section pf" data-reveal>
+      <div class="pf-media">
+        <img class="pf-avatar" src="/img/profile.webp" alt="강사 홍순구 프로필 사진" width="132" height="132" loading="lazy" decoding="async" />
+      </div>
+      <div class="pf-body">
+        <p class="eyebrow">만든 사람</p>
+        <h2 class="t-h2" style="margin:6px 0 12px;">개발자이자 튜터,<br>홍순구입니다 👋</h2>
+        <p class="pf-bio">비전공자가 코딩 앞에서 막막해하는 순간을 너무 많이 봤어요. 그래서 'AI 시대에도 흔들리지 않는 기본기' 자료를 만들기 시작했고, 결국 초개인화 학습앱 Klue까지 만들었습니다.</p>
+        <div class="pf-creds">
+          <span class="pf-cred">에듀윌 정처기·SQLD 교수</span>
+          <span class="pf-cred">팀스파르타 백엔드 공식튜터</span>
+          <span class="pf-cred">학습앱 Klue 창업</span>
+        </div>
+        <a class="btn btn--secondary" href="/about/">소개·포트폴리오 →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FUNNEL — 더 깊게 -->
+  <section class="section">
+    <div class="cta-band" data-reveal>
+      <p class="eyebrow">더 깊게 배우려면</p>
+      <h3 class="t-h3">공식 채널로 이어서</h3>
+      <p>여기 무료 자료로 기본기를 잡았다면, 다음 단계는 이 채널들에서.</p>
+      <div class="funnel-mini">
+        <FunnelLink funnel={FUNNELS.klue} class="card card--link fmini" arrow={false} badge={false}><span class="fmini-logo is-fill"><img src={FUNNELS.klue.logoImg} alt="Klue 로고" loading="lazy" /></span><span class="fmini-sub">{FUNNELS.klue.comingSoon ? '학습앱 · 준비중' : '학습앱'}</span></FunnelLink>
+        <FunnelLink funnel={FUNNELS.sparta} class="card card--link fmini" arrow={false} badge={false}><span class="fmini-logo is-contain"><img src={FUNNELS.sparta.logoImg} alt="팀스파르타 로고" loading="lazy" /></span><span class="fmini-sub">부트캠프</span></FunnelLink>
+        <FunnelLink funnel={FUNNELS.eduwill} class="card card--link fmini" arrow={false} badge={false}><span class="fmini-logo is-contain"><img src={FUNNELS.eduwill.logoImg} alt="에듀윌 로고" loading="lazy" /></span><span class="fmini-sub">온라인강의</span></FunnelLink>
+      </div>
+    </div>
+  </section>
+
+  {/* 히어로 코드 예시 슬라이드 순환(런타임). grid 스택 크로스페이드 — 무JS면 첫 슬라이드만(나머지 CSS hidden),
+      prefers-reduced-motion이면 자동순환 정지. 점(dot) 클릭으로 수동 전환 + hover/focus 시 일시정지. */}
+  <script is:inline>
+    (function () {
+      var card = document.querySelector('[data-hv-rotate]');
+      if (!card) return;
+      var slides = Array.prototype.slice.call(card.querySelectorAll('.hv-slide'));
+      var dots = Array.prototype.slice.call(card.querySelectorAll('.hv-dot'));
+      var fileEl = card.querySelector('[data-hv-file]');
+      if (slides.length < 2) return;
+      var i = 0;
+      for (var k = 0; k < slides.length; k++) { if (slides[k].classList.contains('is-active')) { i = k; break; } }
+      function show(n) {
+        n = (n + slides.length) % slides.length;
+        slides.forEach(function (s, k) { s.classList.toggle('is-active', k === n); });
+        dots.forEach(function (d, k) { var on = k === n; d.classList.toggle('is-active', on); d.setAttribute('aria-current', on ? 'true' : 'false'); });
+        var f = slides[n].getAttribute('data-file');
+        if (fileEl && f) fileEl.textContent = f;
+        i = n;
+      }
+      var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var timer = null;
+      function stop() { if (timer) { clearInterval(timer); timer = null; } }
+      function start() { if (reduce) return; stop(); timer = setInterval(function () { show(i + 1); }, 6000); }
+      dots.forEach(function (d, k) { d.addEventListener('click', function () { show(k); start(); }); });
+      card.addEventListener('mouseenter', stop);
+      card.addEventListener('mouseleave', start);
+      card.addEventListener('focusin', stop);
+      card.addEventListener('focusout', start);
+      show(i);
+      start();
+    })();
+  </script>
+
+</Base>
+
+<style>
+  /* 토스식 스크롤 진입 모션(가벼운 폴리시) — JS가 html.reveal-on을 달 때만 [data-reveal]를 숨긴다.
+     무JS면 reveal-on이 없어 항상 보이고(죽은 콘텐츠 0), reduced-motion이면 스크립트가 reveal-on을
+     아예 안 달아 즉시 표시된다. 스태거는 --ri(카드 index)로 살짝 시차. */
+  :global(html.reveal-on) [data-reveal] {
+    opacity: 0; transform: translateY(18px);
+    transition: opacity .6s var(--ease), transform .6s var(--ease);
+    transition-delay: calc(var(--ri, 0) * 70ms);
+  }
+  :global(html.reveal-on) [data-reveal].is-revealed { opacity: 1; transform: none; }
+
+  .hero { background: linear-gradient(180deg, var(--surface-warm), var(--surface-page) 78%); border-bottom: 1px solid var(--border-subtle); }
+  .hero-inner { max-width: var(--w-page); margin-inline: auto; padding: var(--sp-9) var(--sp-5) var(--sp-8); display: grid; grid-template-columns: 1.05fr .95fr; gap: var(--sp-7); align-items: center; }
+  @media (max-width: 880px){ .hero-inner { grid-template-columns: 1fr; gap: var(--sp-6); padding-top: var(--sp-7); } }
+  .hero h1 { font-size: clamp(2.1rem, 4.2vw, var(--fs-display)); font-weight: var(--fw-extra); line-height: var(--lh-tight); letter-spacing: var(--ls-tight); color: var(--text-strong); margin: var(--sp-3) 0 0; text-wrap: balance; }
+  .hero-answer { font-size: var(--fs-h3); font-weight: var(--fw-bold); color: var(--text-strong); margin: var(--sp-4) 0 0; letter-spacing: var(--ls-snug); }
+  .hero-answer em { font-style: normal; color: var(--brand-text); }
+  .hero p.sub { font-size: var(--fs-body-lg); color: var(--text-muted); margin: var(--sp-3) 0 var(--sp-5); max-width: 47ch; }
+  .hero p.sub b { color: var(--text-default); font-weight: var(--fw-semibold); }
+  .hero-cta { display: flex; gap: var(--sp-3); flex-wrap: wrap; }
+  .hero-trust { display:flex; gap: var(--sp-5); margin-top: var(--sp-6); }
+  .hero-trust .n { font-size: 1.7rem; font-weight: var(--fw-extra); color: var(--text-strong); font-variant-numeric: tabular-nums; letter-spacing: 0; }
+  .hero-trust .n .u { font-size: 1rem; }
+  .hero-trust .l { font-size: var(--fs-xs); color: var(--text-muted); }
+
+  /* 히어로 비주얼 — 코드 카드 + 사람의 리뷰 노트 */
+  .hero-vis { background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--r-2xl); box-shadow: var(--shadow-lg); overflow: hidden; }
+  .hv-bar { display:flex; align-items:center; gap:8px; padding: 10px 14px; border-bottom: 1px solid var(--border-subtle); }
+  .hv-bar .d { width: 10px; height: 10px; border-radius: 50%; background: var(--border-strong); }
+  .hv-bar .t { margin-left: 8px; font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--text-muted); }
+  .hv-aitag { margin-left: auto; font-size: var(--fs-xs); font-weight: var(--fw-semibold); color: var(--info); background: var(--info-bg); border: 1px solid var(--info-border); border-radius: var(--r-full); padding: 2px 10px; }
+  .hv-body { padding: var(--sp-5); }
+  .hv-code { background: var(--surface-inset); border-radius: var(--r-md); padding: var(--sp-4); font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.7; color: #e7edf5; white-space: pre-wrap; word-break: keep-all; tab-size: 2; }
+  /* set:html 로 주입한 코드 span 들은 Astro 스코프 속성이 없어 → :global 로 색을 입힌다(아니면 무채색). */
+  .hv-code :global(.hk) { color:#ff9d85; }
+  .hv-code :global(.hs) { color:#9ad29a; }
+  .hv-code :global(.hc-cmt) { color:#7c8794; }
+  .hv-code :global(.hc-bad) { color:#ffb454; font-weight: var(--fw-bold); }
+  .hv-note { display:flex; flex-direction:column; gap:2px; margin-top: var(--sp-4); padding: var(--sp-3) var(--sp-4); border-left: 3px solid var(--brand); background: var(--brand-tint); border-radius: 0 var(--r-md) var(--r-md) 0; }
+  .hv-note-q { font-size: var(--fs-sm); font-weight: var(--fw-semibold); color: var(--text-strong); }
+  .hv-note-q :global(b) { color: var(--brand-text); }
+  .hv-note-a { font-size: var(--fs-xs); color: var(--text-muted); }
+
+  /* 코드 예시 슬라이드 — grid 스택으로 모든 슬라이드를 한 셀에 겹쳐 자동 높이(전환 시 점프 0) + 크로스페이드.
+     기본은 첫 슬라이드만 .is-active(무JS graceful) → 런타임이 순환. */
+  .hv-stack { display: grid; }
+  .hv-slide { grid-area: 1 / 1; align-self: start; opacity: 0; visibility: hidden; transform: translateY(8px); pointer-events: none;
+    transition: opacity var(--dur-slow) var(--ease), transform var(--dur-slow) var(--ease), visibility 0s var(--dur-slow); }
+  .hv-slide.is-active { opacity: 1; visibility: visible; transform: none; pointer-events: auto;
+    transition: opacity var(--dur-slow) var(--ease), transform var(--dur-slow) var(--ease), visibility 0s; }
+  .hv-dots { display: flex; gap: 6px; justify-content: center; margin-top: var(--sp-4); }
+  .hv-dot { width: 7px; height: 7px; padding: 0; border: none; border-radius: var(--r-full); cursor: pointer;
+    background: var(--border-strong); transition: width var(--dur) var(--ease), background var(--dur) var(--ease); }
+  .hv-dot.is-active { width: 18px; background: var(--brand); }
+  .hv-dot:hover { background: var(--brand-text); }
+  .hv-dot:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+  @media (prefers-reduced-motion: reduce) {
+    .hv-slide { transition: opacity 0s, visibility 0s; transform: none; }
+  }
+
+  .section { max-width: var(--w-page); margin-inline: auto; padding: var(--sp-8) var(--sp-5); }
+  .band { background: var(--surface-subtle); border-top: 1px solid var(--border-subtle); border-bottom: 1px solid var(--border-subtle); }
+  .band .section { padding-block: var(--sp-8); }
+
+  /* WHY — 확신 3기둥 */
+  .why-head { max-width: 640px; margin: 0 auto var(--sp-7); text-align: center; }
+  .why-head h2 { margin: 6px 0 12px; }
+  .why-head h2 em { font-style: normal; color: var(--brand-text); }
+  .why-head .eyebrow { justify-content: center; }
+  .why-lede { color: var(--text-muted); font-size: var(--fs-body-lg); margin: 0; }
+  .why-card { display: flex; flex-direction: column; gap: 10px; }
+  .why-ico { width: 44px; height: 44px; border-radius: var(--r-md); display: grid; place-items: center; background: var(--info-bg); color: var(--info); }
+  .why-ico :global(.gi) { width: 23px; height: 23px; }
+  .why-card h3 { margin: 0; }
+  .why-card p { margin: 0; color: var(--text-muted); font-size: var(--fs-sm); line-height: var(--lh-snug); }
+
+  /* HUB foot — /map · /start 연결 */
+  .hub-foot { display: flex; flex-direction: column; align-items: center; gap: var(--sp-3); margin-top: var(--sp-6); text-align: center; }
+  .hub-nudge { margin: 0; font-size: var(--fs-sm); color: var(--text-muted); }
+  .hub-nudge a { font-weight: var(--fw-semibold); }
+
+  /* CERT — 보조 스트립(코딩보다 시각적으로 낮게) */
+  .cert-strip { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--sp-5);
+    background: var(--surface-card); border: 1px solid var(--border-default); border-radius: var(--r-xl); padding: var(--sp-5) var(--sp-6); }
+  .cs-ico { width: 46px; height: 46px; flex: none; border-radius: var(--r-md); display: grid; place-items: center; background: var(--surface-subtle); color: var(--text-muted); }
+  .cs-ico :global(.gi) { width: 24px; height: 24px; }
+  .cs-body { min-width: 0; }
+  .cs-title { font-size: var(--fs-h3); font-weight: var(--fw-bold); color: var(--text-strong); margin: 4px 0 0; letter-spacing: var(--ls-snug); }
+  .cs-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: var(--sp-3); }
+  .cs-chip { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); font-weight: var(--fw-medium); color: var(--text-default);
+    background: var(--surface-subtle); border: 1px solid var(--border-subtle); border-radius: var(--r-full); padding: 4px 12px; }
+  .cs-chip.is-soon { color: var(--text-faint); }
+  .cs-cta { flex: none; white-space: nowrap; }
+  @media (max-width: 720px){
+    .cert-strip { grid-template-columns: 1fr; text-align: left; }
+    .cs-cta { width: 100%; justify-content: center; }
+  }
+
+  /* PORTFOLIO */
+  .pf { display: grid; grid-template-columns: auto 1fr; gap: var(--sp-7); align-items: center; }
+  .pf-media { display: grid; place-items: center; }
+  .pf-avatar { width: 132px; height: 132px; border-radius: var(--r-2xl); object-fit: cover; object-position: 50% 25%;
+    background: var(--brand-tint); border: 1px solid var(--brand-tint-bd); box-shadow: var(--shadow-md); }
+  .pf-bio { color: var(--text-muted); font-size: var(--fs-body-lg); margin: 0 0 var(--sp-5); max-width: 52ch; }
+  .pf-creds { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: var(--sp-5); }
+  .pf-cred { display: inline-flex; align-items: center; font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--brand-text);
+    background: var(--brand-tint); border: 1px solid var(--brand-tint-bd); border-radius: var(--r-full); padding: 5px 12px; }
+  @media (max-width: 680px){
+    .pf { grid-template-columns: 1fr; gap: var(--sp-5); text-align: center; justify-items: center; }
+    .pf-bio { max-width: none; }
+    .pf-creds { justify-content: center; }
+  }
+
+  /* 푸터 유입 미니카드: 전역 .grid-3 대신 3→1열 직접 분기 */
+  .funnel-mini { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: var(--sp-3); }
+  @media (max-width: 560px) { .funnel-mini { grid-template-columns: 1fr; } }
+  .fmini { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 14px 12px; text-align: center; }
+  .fmini-logo { display: grid; place-items: center; height: 30px; }
+  .fmini-logo.is-fill img { width: 30px; height: 30px; border-radius: 7px; object-fit: cover; display: block; }
+  .fmini-logo.is-contain { background: #fff; border-radius: 7px; padding-inline: 8px; box-shadow: inset 0 0 0 1px rgba(0,0,0,.06); }
+  .fmini-logo.is-contain img { max-height: 26px; max-width: 100%; width: auto; height: auto; display: block; }
+  .fmini-sub { font-size: var(--fs-xs); color: var(--text-muted); }
+</style>

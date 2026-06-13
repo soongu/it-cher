@@ -1,0 +1,243 @@
+---
+// 코딩 트랙 강의목록 상단의 GitHub 소스코드 배너 — 학생이 실습 코드를 바로 받게 한다.
+//   props: repo(필수, GitHub 저장소 URL · content.mjs CODE_BUCKETS 토픽의 repo, SSOT) · topicLabel
+//   여기서 clone URL·저장소명·owner 를 파생(파일 단일 출처에서 한 줄만 관리).
+// 4요소: ①귀여운 옥토캣 ②저장소 바로가기 ③git clone 원클릭 복사 ④"main 아닌 챕터별 브랜치" 안내.
+// 복사 동작은 하단 hoisted script 블록(.repo-copy 있을 때만) — clipboard API + textarea/execCommand 폴백.
+//   data-copy 에 보이는 명령 그대로 담아 "보이는 것 = 복사되는 것" 보장.
+import ExtLink from './ExtLink.astro'
+const { repo, topicLabel = '' } = Astro.props
+const url = String(repo).replace(/\/+$/, '').replace(/\.git$/, '') // 끝 슬래시/.git 정규화 → 표준 웹 URL
+const cloneUrl = `${url}.git`
+const name = url.split('/').pop()             // 저장소명 (instagram-html-css-js-basic …)
+const owner = url.split('/').slice(-2, -1)[0] // soongu
+const cmd = `git clone ${cloneUrl}`
+// 옥토캣(GitHub 마크) — 단색 fill, 다크 배지 위 흰색. about 페이지 연락처 칩과 동일 패스.
+const OCTO = '<path d="M12 .5C5.6.5.5 5.7.5 12.1c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.5v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17 4.7 18 5 18 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .3.2.6.8.5 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.4.5 12 .5z"/>'
+---
+<section class="repo-banner" aria-label="실습 소스코드 (GitHub)" data-pagefind-ignore>
+  <div class="repo-main">
+    <a class="repo-octo" href={url} target="_blank" rel="noopener" aria-label={`GitHub에서 ${owner}/${name} 저장소 열기 (새 탭)`}>
+      <svg class="repo-octo-mark" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" set:html={OCTO}></svg>
+      <span class="repo-octo-paw" aria-hidden="true">👋</span>
+    </a>
+    <div class="repo-head">
+      <p class="repo-kicker"><span class="repo-kicker-dot"></span>실습 소스코드</p>
+      <h2 class="repo-title">강의 코드를 GitHub에서 바로 받으세요</h2>
+      <p class="repo-desc">{topicLabel ? `${topicLabel} 강의를 따라 만드는 전체 코드예요. ` : '강의를 따라 만드는 전체 코드예요. '}내려받아 직접 돌려보며 익히면 훨씬 빨라요.</p>
+    </div>
+    <a class="repo-name" href={url} target="_blank" rel="noopener" aria-label={`${owner}/${name} 저장소 (새 탭)`}>
+      <svg class="repo-name-octo" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" set:html={OCTO}></svg>
+      <span class="repo-name-owner">{owner}/</span><span class="repo-name-repo">{name}</span>
+    </a>
+  </div>
+
+  <div class="repo-cta">
+    <div class="repo-clone">
+      <span class="repo-clone-ico" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+      </span>
+      <code class="repo-clone-url">git clone {cloneUrl}</code>
+      <button type="button" class="repo-copy" data-copy={cmd} aria-label="git clone 명령 복사">
+        <svg class="repo-copy-ico repo-copy-ico--copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="13" height="13" x="9" y="9" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <svg class="repo-copy-ico repo-copy-ico--ok" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+        <span class="repo-copy-txt">복사</span>
+      </button>
+    </div>
+    <ExtLink href={url} class="repo-btn">
+      <svg class="repo-btn-octo" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" set:html={OCTO}></svg>
+      <span>GitHub에서 코드 보기</span>
+    </ExtLink>
+  </div>
+
+  <p class="repo-branch">
+    <svg class="repo-branch-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+    <span><strong>main</strong> 브랜치가 아니라 <strong>챕터별 브랜치</strong>로 나눠 뒀어요. GitHub 상단의 브랜치 메뉴에서 지금 보는 강의에 맞는 브랜치를 고르면, 그 시점의 코드가 그대로 나옵니다.</span>
+  </p>
+</section>
+
+<style>
+  .repo-banner {
+    margin: var(--sp-4) 0 var(--sp-6);
+    padding: var(--sp-5);
+    border: 1px solid var(--border-default);
+    border-radius: var(--r-lg);
+    background:
+      radial-gradient(120% 140% at 100% 0%, var(--brand-tint) 0%, transparent 46%),
+      var(--surface-card);
+    box-shadow: var(--shadow-sm);
+  }
+
+  /* ── 헤더: 옥토캣 배지 + 카피 + 저장소명 ─────────────────────────── */
+  .repo-main {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: var(--sp-4);
+  }
+  .repo-octo {
+    position: relative;
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 56px; height: 56px;
+    border-radius: 16px;
+    color: #fff;
+    background:
+      radial-gradient(120% 120% at 30% 20%, #3a424b 0%, #1f2328 60%);
+    box-shadow: 0 6px 16px -6px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.10);
+    text-decoration: none;
+    transition: transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s ease;
+  }
+  .repo-octo-mark { width: 32px; height: 32px; transform-origin: 50% 70%; transition: transform .3s ease; }
+  /* 귀여움 포인트: 평소 살짝 떠 있는 옥토캣, 호버 시 손 흔드는 이모지 뿅 + 살짝 점프 */
+  .repo-octo-paw {
+    position: absolute; top: -10px; right: -8px;
+    font-size: 18px; line-height: 1;
+    opacity: 0; transform: scale(.4) rotate(-18deg);
+    transition: opacity .2s ease, transform .25s cubic-bezier(.34,1.56,.64,1);
+    pointer-events: none;
+  }
+  .repo-octo:hover, .repo-octo:focus-visible {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 22px -8px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.14);
+    outline: none;
+  }
+  .repo-octo:hover .repo-octo-mark, .repo-octo:focus-visible .repo-octo-mark { transform: rotate(-7deg) scale(1.04); }
+  .repo-octo:hover .repo-octo-paw, .repo-octo:focus-visible .repo-octo-paw { opacity: 1; transform: scale(1) rotate(0); }
+  .repo-octo:focus-visible { box-shadow: var(--focus-ring), 0 12px 22px -8px rgba(0,0,0,.6); }
+
+  .repo-head { min-width: 0; }
+  .repo-kicker {
+    display: inline-flex; align-items: center; gap: 6px; margin: 0 0 4px;
+    font-size: var(--fs-xs); font-weight: var(--fw-bold); letter-spacing: .02em;
+    color: var(--brand-text); text-transform: uppercase;
+  }
+  .repo-kicker-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--coral-500); box-shadow: 0 0 0 3px var(--coral-100); }
+  .repo-title { margin: 0; font-size: var(--fs-lg, 1.0625rem); font-weight: var(--fw-bold); color: var(--text-default); line-height: 1.35; }
+  .repo-desc { margin: 4px 0 0; font-size: var(--fs-sm); color: var(--text-muted); line-height: var(--lh-relaxed, 1.6); }
+
+  .repo-name {
+    flex: none; align-self: center;
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 7px 12px; border-radius: var(--r-full);
+    font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: var(--fw-medium);
+    color: var(--text-default); background: var(--surface-subtle);
+    border: 1px solid var(--border-default); text-decoration: none; white-space: nowrap;
+    transition: border-color .15s ease, color .15s ease, background .15s ease;
+  }
+  .repo-name:hover { border-color: var(--coral-300); color: var(--brand-text); background: var(--brand-tint); }
+  .repo-name-octo { width: 15px; height: 15px; flex: none; }
+  .repo-name-owner { color: var(--text-muted); }
+
+  /* ── 클론 입력군 + GitHub 버튼 ───────────────────────────────────── */
+  .repo-cta {
+    display: flex; flex-wrap: wrap; gap: var(--sp-3);
+    margin-top: var(--sp-4);
+  }
+  .repo-clone {
+    flex: 1 1 340px; min-width: 0;
+    display: flex; align-items: stretch;
+    border: 1px solid var(--border-default); border-radius: var(--r-md);
+    background: var(--surface-subtle); overflow: hidden;
+  }
+  .repo-clone-ico {
+    flex: none; display: grid; place-items: center; width: 38px;
+    color: var(--text-muted); background: var(--surface-card);
+    border-right: 1px solid var(--border-default);
+  }
+  .repo-clone-ico svg { width: 16px; height: 16px; }
+  .repo-clone-url {
+    flex: 1 1 auto; min-width: 0; display: flex; align-items: center;
+    padding: 0 12px; overflow-x: auto; white-space: nowrap;
+    font-family: var(--font-mono); font-size: var(--fs-sm); color: var(--text-default);
+    -ms-overflow-style: none; scrollbar-width: none;
+  }
+  .repo-clone-url::-webkit-scrollbar { display: none; }
+  .repo-copy {
+    flex: none; display: inline-flex; align-items: center; gap: 6px;
+    padding: 0 14px; cursor: pointer;
+    font-size: var(--fs-xs); font-weight: var(--fw-semibold); color: var(--text-default);
+    background: var(--surface-card); border: none; border-left: 1px solid var(--border-default);
+    transition: background .15s ease, color .15s ease;
+  }
+  .repo-copy:hover { background: var(--brand-tint); color: var(--brand-text); }
+  .repo-copy:focus-visible { outline: 2px solid var(--coral-400); outline-offset: -2px; }
+  .repo-copy-ico { width: 15px; height: 15px; flex: none; }
+  .repo-copy-ico--ok { display: none; color: var(--ok); }
+  .repo-copy.is-ok { color: var(--ok); }
+  .repo-copy.is-ok .repo-copy-ico--copy { display: none; }
+  .repo-copy.is-ok .repo-copy-ico--ok { display: inline; }
+  .repo-copy.is-err { color: var(--coral-600); }
+
+  .repo-btn {
+    flex: none; display: inline-flex; align-items: center; gap: 8px;
+    padding: 0 16px; min-height: 40px; border-radius: var(--r-md);
+    font-size: var(--fs-sm); font-weight: var(--fw-semibold);
+    color: #fff; background: #1f2328; border: 1px solid #1f2328;
+    text-decoration: none; transition: background .15s ease, transform .15s ease;
+  }
+  .repo-btn:hover { background: #313840; }
+  .repo-btn:active { transform: translateY(1px); }
+  .repo-btn:focus-visible { outline: 2px solid var(--coral-400); outline-offset: 2px; }
+  .repo-btn-octo { width: 18px; height: 18px; flex: none; }
+
+  /* ── 챕터별 브랜치 안내 ──────────────────────────────────────────── */
+  .repo-branch {
+    display: grid; grid-template-columns: 20px 1fr; gap: 8px; align-items: start;
+    margin: var(--sp-4) 0 0; padding: var(--sp-3) var(--sp-4);
+    border-radius: var(--r-md);
+    background: var(--info-bg); border: 1px solid var(--info-border);
+    font-size: var(--fs-sm); color: var(--text-default); line-height: var(--lh-relaxed, 1.6);
+  }
+  .repo-branch-ico { width: 18px; height: 18px; margin-top: 2px; color: var(--info); }
+  .repo-branch strong { font-weight: var(--fw-bold); color: var(--info); }
+
+  /* 모바일: 헤더를 2행으로 — 저장소명 칩을 옥토캣/카피 아래로 내려 줄바꿈 안전 */
+  @media (max-width: 560px) {
+    .repo-banner { padding: var(--sp-4); }
+    .repo-main { grid-template-columns: auto 1fr; row-gap: var(--sp-3); }
+    .repo-name { grid-column: 1 / -1; justify-self: start; }
+    .repo-btn { flex: 1 1 auto; justify-content: center; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .repo-octo, .repo-octo-mark, .repo-octo-paw, .repo-btn, .repo-name { transition: none; }
+    .repo-octo:hover, .repo-octo:focus-visible { transform: none; }
+  }
+</style>
+
+<script>
+  // 강의목록 GitHub 배너의 clone 복사. clipboard API → textarea/execCommand 폴백(구형/비보안 컨텍스트).
+  document.querySelectorAll('.repo-copy').forEach((btn) => {
+    const text = btn.getAttribute('data-copy') || ''
+    const label = btn.querySelector('.repo-copy-txt')
+    let timer = null
+    const copy = (t) => {
+      if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(t)
+      return new Promise((res, rej) => {
+        try {
+          const ta = document.createElement('textarea')
+          ta.value = t; ta.setAttribute('readonly', '')
+          ta.style.position = 'absolute'; ta.style.left = '-9999px'
+          document.body.appendChild(ta); ta.select()
+          const ok = document.execCommand('copy'); document.body.removeChild(ta)
+          ok ? res() : rej(new Error('execCommand'))
+        } catch (e) { rej(e) }
+      })
+    }
+    const flash = (msg, ok) => {
+      btn.classList.toggle('is-ok', !!ok)
+      btn.classList.toggle('is-err', !ok)
+      if (label) label.textContent = msg
+      clearTimeout(timer)
+      timer = setTimeout(() => {
+        btn.classList.remove('is-ok', 'is-err')
+        if (label) label.textContent = '복사'
+      }, 1800)
+    }
+    btn.addEventListener('click', () => {
+      copy(text).then(() => flash('복사됨!', true)).catch(() => flash('복사 실패', false))
+    })
+  })
+</script>

@@ -1,0 +1,70 @@
+---
+// 코딩 트랙 난이도 + 선수지식 안내 — 학생경험 🟠 항목 5.
+// 선행 학습을 전제하는 강의(예: 스프링 AI ← 스프링 부트·자바)를 화면에 알려 독학자가 막히지 않게 한다.
+// 메타(content.mjs CODE_BUCKETS)에서만 구성 — 강의 본문을 파싱하지 않는다.
+// 검색 비색인(data-pagefind-ignore): 코딩 강 상세에선 doc-main(data-pagefind-body) 안에 들어가므로 필수.
+//   props: level('intro'|'intermediate'|'advanced') · prereq(string[]) · note(string)
+import { topicHrefByLabel } from '../lib/content.mjs'
+const { level = '', prereq = [], note = '' } = Astro.props
+const LEVELS = {
+  intro:        { label: '입문', tone: 'intro' },
+  intermediate: { label: '중급', tone: 'mid' },
+  advanced:     { label: '심화', tone: 'adv' },
+}
+const lv = LEVELS[level] || null
+const reqs = Array.isArray(prereq) ? prereq.filter(Boolean) : []
+// 선수지식 칩 → 해당 토픽 페이지 딥링크(매칭 없으면 href=null → 비링크). 막다른 라벨을 '먼저 보러 가기' 동선으로.
+const reqLinks = reqs.map((p) => ({ label: p, href: topicHrefByLabel(p) }))
+const show = lv || reqs.length || note
+---
+{show && (
+  <div class="lvlmeta" data-pagefind-ignore>
+    <div class="lvlmeta-row">
+      {lv && <span class={`lvl-badge lvl-badge--${lv.tone}`}>난이도 · {lv.label}</span>}
+      {reqs.length > 0 && (
+        <span class="prereq">
+          <span class="prereq-lbl">선수지식</span>
+          {reqLinks.map((p) => p.href
+            ? <a class="prereq-chip prereq-chip--link" href={p.href} aria-label={`${p.label} 보러 가기`}>{p.label}<span class="prereq-chip-arr" aria-hidden="true">→</span></a>
+            : <span class="prereq-chip">{p.label}</span>)}
+        </span>
+      )}
+    </div>
+    {note && <p class="lvlmeta-note"><span class="lvlmeta-note-ico">ℹ️</span><span>{note}</span></p>}
+  </div>
+)}
+
+<style>
+  .lvlmeta { margin: var(--sp-4) 0; }
+  .lvlmeta-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .lvl-badge {
+    display: inline-flex; align-items: center; white-space: nowrap;
+    font-size: var(--fs-xs); font-weight: var(--fw-semibold); line-height: 1;
+    padding: 5px 9px; border-radius: var(--r-full); border: 1px solid transparent;
+  }
+  .lvl-badge--intro { color: var(--ok);   background: var(--ok-bg);   border-color: var(--ok-border); }
+  .lvl-badge--mid   { color: var(--info); background: var(--info-bg); border-color: var(--info-border); }
+  .lvl-badge--adv   { color: var(--warn); background: var(--warn-bg); border-color: var(--warn-border); }
+  .prereq { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .prereq-lbl { font-size: var(--fs-xs); font-weight: var(--fw-semibold); color: var(--text-muted); }
+  .prereq-chip {
+    font-size: var(--fs-xs); font-weight: var(--fw-medium); color: var(--text-default);
+    background: var(--surface-subtle); border: 1px solid var(--border-default);
+    padding: 4px 8px; border-radius: var(--r-full); white-space: nowrap;
+  }
+  /* 선수지식 칩을 CTA 링크로 — 클릭하면 해당 토픽으로(코딩 트랙 쿨톤). */
+  a.prereq-chip {
+    display: inline-flex; align-items: center; gap: 4px; text-decoration: none; cursor: pointer;
+    transition: background var(--dur-fast) var(--ease), border-color var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+  }
+  a.prereq-chip:hover { color: var(--info); background: var(--info-bg); border-color: var(--info-border); text-decoration: none; }
+  .prereq-chip-arr { font-weight: var(--fw-bold); color: var(--text-faint); }
+  a.prereq-chip:hover .prereq-chip-arr { color: var(--info); }
+  .lvlmeta-note {
+    display: grid; grid-template-columns: 18px 1fr; gap: 8px;
+    margin: 10px 0 0; padding: var(--sp-3) var(--sp-4);
+    border-radius: var(--r-md); background: var(--warn-bg); border: 1px solid var(--warn-border);
+    font-size: var(--fs-sm); color: var(--text-default); line-height: var(--lh-relaxed, 1.6);
+  }
+  .lvlmeta-note-ico { line-height: 1.5; }
+</style>

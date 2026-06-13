@@ -1,0 +1,39 @@
+---
+import Base from '../../../../../layouts/Base.astro'
+import Crumbs from '../../../../../components/Crumbs.astro'
+import { cpeSubjects } from '../../../../../lib/content.mjs'
+import HubCard from '../../../../../components/HubCard.astro'
+import ProgressGroup from '../../../../../components/ProgressGroup.astro'
+const subjects = cpeSubjects()
+// F41: 5과목 통합 '이어보기' — 데크 준비된 강만(강 상세 lecKey·/map 카드와 동일 집합), 과목·강 순서 보존.
+// 진도/이어보기는 Base.astro localStorage 런타임이 data-prog 계약으로 채운다(빌드타임 0%).
+const resumeItems = subjects.flatMap((s) =>
+  s.lectures.filter((l) => l.deck).map((l) => ({ h: `/cert/cpe/written/theory/${s.slug}/${l.slug}/`, l: `${l.num}강 · ${l.topic}` }))
+)
+---
+<Base title="정보처리기사 필기 이론 — 과목 · it-cher" desc="정보처리기사 필기 이론 5과목 강별 슬라이드. 과목을 선택하세요.">
+  <div class="page">
+    <Crumbs trail={[{ href: '/cert/', label: '자격증' }, { href: '/cert/cpe/', label: '정보처리기사' }, { href: '/cert/cpe/written/', label: '필기' }, { label: '이론' }]} />
+    <div class="page-head">
+      <h1>필기 이론 · 5과목</h1>
+      <p class="lede">과목을 선택하세요. 핵심만 압축한 정리 슬라이드로, 준비된 강의부터 학습할 수 있어요.</p>
+    </div>
+
+    {resumeItems.length > 0 && <div style="margin-bottom: var(--sp-6);"><ProgressGroup items={resumeItems} unit="강" /></div>}
+
+    <div class="grid grid-3">
+      {subjects.map((s) => {
+        const ready = s.lectures.filter((l) => l.deck).length
+        return (
+          <HubCard
+            href={`/cert/cpe/written/theory/${s.slug}/`}
+            mark={s.slug.toUpperCase()}
+            title={s.label}
+            status={ready > 0 ? 'live' : 'soon'}
+            meta={`${s.lectures.length}강 · 슬라이드 ${ready}개`}
+          />
+        )
+      })}
+    </div>
+  </div>
+</Base>

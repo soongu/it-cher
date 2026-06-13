@@ -1,0 +1,17 @@
+---
+import Base from '../../../layouts/Base.astro'
+import ComingSoon from '../../../components/ComingSoon.astro'
+import { certTrack } from '../../../lib/content.mjs'
+const node = certTrack('adsp')
+const p = node.preview
+---
+<Base title="ADsP 데이터 분석 준전문가 — 준비중 · it-cher" desc={p.context}>
+  <ComingSoon
+    title="ADsP · 데이터 분석 준전문가"
+    context={p.context}
+    roadmap={p.roadmap}
+    live={p.live}
+    ctas={p.ctas}
+    crumbs={[{ href: '/', label: '홈' }, { href: '/cert/', label: '자격증' }, { label: 'ADsP' }]}
+  />
+</Base>

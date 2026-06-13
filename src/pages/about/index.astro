@@ -1,0 +1,109 @@
+---
+import Base from '../../layouts/Base.astro'
+import { FUNNELS } from '../../lib/links.mjs'
+import FunnelLink from '../../components/FunnelLink.astro'
+import { materialCount } from '../../lib/content.mjs'
+
+const materials = materialCount() // 공개 강의 자료 수 = 빌드타임 자동 집계
+
+// 포트폴리오 정보 (실제값)
+const profile = {
+  name: '홍순구',
+  role: '개발자 · IT 자격증/풀스택 프로그래밍 튜터',
+  bio: "비전공자가 코딩과 자격증 앞에서 막막해하는 순간을 너무 많이 봤습니다. 그래서 '읽기 좋은 자료'를 만들기 시작했고, 결국 초개인화 학습앱 Klue까지 만들게 됐어요.",
+  email: 'hsg9984@gmail.com',
+  instagram: 'soongu_hong',
+  github: 'soongu',
+}
+const timeline = [
+  { year: '2026', title: '에듀테크 자격증 앱 Klue 창업', desc: '정처기·SQLD 초개인화 학습 플랫폼을 직접 창업 — 정식 출시 준비 중.' },
+  { year: '2026', title: '팀스파르타 백엔드 부트캠프 공식튜터', desc: '팀스파르타 백엔드 부트캠프 공식 튜터로 활동.' },
+  { year: '2025', title: '에듀윌 정보처리기사·SQLD 교수', desc: '에듀윌 온라인강의 자격증 과정 강의.' },
+  { year: '2025', title: 'HRDNET 부트캠프 훈련교사', desc: '국비지원 부트캠프 훈련교사 · 평균 평점 4.9점.' },
+  { year: '2020', title: '부트캠프·기업강의 시작', desc: '비전공자 대상 부트캠프·기업 출강 시작.' },
+  { year: '2016', title: '개발 커리어 시작', desc: '웹·모바일·서버·게임 가리지 않고 다양한 프로젝트에 참여하며 개발해 왔습니다.' },
+]
+---
+<Base title={`소개 · ${profile.name} — it-cher`} desc="개발/IT자격증 강사 홍순구 포트폴리오 · Klue 창업자">
+
+  <section class="about-hero">
+    <div class="about-inner">
+      <img class="avatar" src="/img/profile.webp" alt="강사 홍순구 프로필 사진" width="140" height="140" loading="eager" decoding="async" />
+      <div>
+        <h1>{profile.name}</h1>
+        <p class="role">{profile.role}</p>
+        <p class="bio">{profile.bio}</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec">
+    <div class="grid grid-3">
+      <div class="card card--pad"><div class="t-num" style="font-size:2rem; color:var(--brand-text)">10<span style="font-size:1rem">년+</span></div><div class="t-sm t-muted" style="margin-top:4px;">개발 · 강의 경력</div></div>
+      <div class="card card--pad"><div class="t-num" style="font-size:2rem; color:var(--brand-text)">{materials.total}<span style="font-size:1rem">개</span></div><div class="t-sm t-muted" style="margin-top:4px;">공개한 강의 자료</div></div>
+      <div class="card card--pad"><div class="t-num" style="font-size:2rem; color:var(--brand-text)">1<span style="font-size:1rem">개</span></div><div class="t-sm t-muted" style="margin-top:4px;">직접 만든 학습앱 (Klue)</div></div>
+    </div>
+  </section>
+
+  <section class="sec" style="padding-top:0;">
+    <h2 class="t-h2">걸어온 길</h2>
+    <div class="timeline">
+      {timeline.map((t) => (
+        <div class="tl-item">
+          <div class="tl-year">{t.year}</div>
+          <div class="tl-body">
+            <div class="tt">{t.title.includes('Klue')
+            ? <>{t.title.split('Klue')[0]}<span style="color:var(--brand-text)">Klue</span>{t.title.split('Klue')[1]}</>
+            : t.title}</div>
+            <div class="td">{t.desc}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section class="sec" style="padding-top:0;">
+    <h2 class="t-h2">만든 것 · Klue</h2>
+    <div class="card card--pad klue-card">
+      <img src="/img/funnel/klue.svg" alt="Klue 로고" width="56" height="56" style="width:56px;height:56px;border-radius:var(--r-lg);display:block;flex:none;" />
+      <div>
+        <div class="row" style="gap:8px;"><span class="t-h3">Klue</span>{FUNNELS.klue.comingSoon && <span class="badge badge--planned"><span class="dot"></span>준비중</span>}</div>
+        <p class="t-sm t-muted" style="margin:6px 0 0; max-width: 56ch;">비전공자를 위한 정처기·SQLD 초개인화 학습 플랫폼. 틀린 문제만 AI가 단원별로 묶어주고, SQL 쿼리 실행을 한 단계씩 시각화해 보여줍니다.</p>
+      </div>
+      <FunnelLink funnel={FUNNELS.klue} class="btn btn--brand-soft">살펴보기</FunnelLink>
+    </div>
+  </section>
+
+  <section class="sec" style="padding-top:0;">
+    <h2 class="t-h2">연락처</h2>
+    <div class="contact-row">
+      <a class="contact-chip" href={`mailto:${profile.email}`}><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg> {profile.email}</a>
+      <a class="contact-chip" href={`https://instagram.com/${profile.instagram}`} target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg> @{profile.instagram}</a>
+      <a class="contact-chip" href={`https://github.com/${profile.github}`} target="_blank" rel="noopener"><svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 .5C5.6.5.5 5.7.5 12.1c0 5.1 3.3 9.4 7.9 10.9.6.1.8-.2.8-.5v-2c-3.2.7-3.9-1.4-3.9-1.4-.5-1.3-1.3-1.7-1.3-1.7-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.7 1.3 3.4 1 .1-.8.4-1.3.7-1.6-2.6-.3-5.3-1.3-5.3-5.8 0-1.3.5-2.3 1.2-3.1-.1-.3-.5-1.5.1-3.1 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17 4.7 18 5 18 5c.6 1.6.2 2.8.1 3.1.8.8 1.2 1.8 1.2 3.1 0 4.5-2.7 5.5-5.3 5.8.4.4.8 1.1.8 2.2v3.3c0 .3.2.6.8.5 4.6-1.5 7.9-5.8 7.9-10.9C23.5 5.7 18.4.5 12 .5z"/></svg> {profile.github}</a>
+    </div>
+  </section>
+
+</Base>
+
+<style>
+  .about-hero { background: linear-gradient(180deg, var(--surface-warm), var(--surface-page)); border-bottom:1px solid var(--border-subtle); }
+  .about-inner { max-width: 920px; margin-inline:auto; padding: var(--sp-8) var(--sp-5) var(--sp-7); display:grid; grid-template-columns: 140px 1fr; gap: var(--sp-6); align-items:center; }
+  @media (max-width:680px){ .about-inner { grid-template-columns:1fr; text-align:center; justify-items:center; } }
+  .avatar { width:140px; height:140px; border-radius: var(--r-2xl); background: var(--brand-tint); border:1px solid var(--brand-tint-bd); object-fit: cover; object-position: 50% 25%; box-shadow: var(--shadow-md); }
+  .about-inner h1 { font-size: var(--fs-h1); font-weight: var(--fw-extra); letter-spacing: var(--ls-tight); color: var(--text-strong); margin: 0; }
+  .about-inner .role { color: var(--brand-text); font-weight: var(--fw-semibold); margin: 8px 0 12px; }
+  .about-inner p.bio { color: var(--text-muted); font-size: var(--fs-body-lg); margin:0; max-width: 52ch; }
+  .sec { max-width: 920px; margin-inline:auto; padding: var(--sp-7) var(--sp-5); }
+  .sec h2 { margin: 0 0 var(--sp-5); }
+  .klue-card { display:grid; grid-template-columns: auto 1fr auto; gap: var(--sp-5); align-items:center; }
+  @media (max-width:680px){ .klue-card { grid-template-columns: 1fr; text-align:center; justify-items:center; } }
+  .timeline { display:flex; flex-direction:column; }
+  .tl-item { display:grid; grid-template-columns: 90px 1fr; gap: var(--sp-5); padding: var(--sp-4) 0; border-top:1px solid var(--border-subtle); }
+  .tl-item:first-child { border-top:none; }
+  .tl-year { font-variant-numeric: tabular-nums; font-weight: var(--fw-bold); color: var(--brand-text); font-size: var(--fs-body); }
+  .tl-body .tt { font-weight: var(--fw-semibold); color: var(--text-strong); }
+  .tl-body .td { color: var(--text-muted); font-size: var(--fs-sm); margin-top:2px; }
+  .contact-row { display:flex; flex-wrap:wrap; gap: var(--sp-3); }
+  .contact-chip { display:inline-flex; align-items:center; gap:8px; padding: 10px 16px; border:1px solid var(--border-default); border-radius: var(--r-md); background: var(--surface-card); color: var(--text-default); font-weight:500; font-size: var(--fs-sm); }
+  .contact-chip:hover { border-color: var(--brand-tint-bd); background: var(--brand-tint); color: var(--brand-text); text-decoration:none; }
+</style>

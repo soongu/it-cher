@@ -1,0 +1,10 @@
+---
+// 공용 라인 글리프 — 단색(currentColor) Lucide 스타일 24px 아이콘. path SSOT 는 src/lib/glyphs.mjs.
+// 코딩 트랙의 기술 브랜드 로고(java/spring/js, public/img/tech, <img>)와 달리, 공식 로고가 없는
+// 목표·도메인·섹션 아이콘은 모두 이 글리프로 통일한다. 색은 담는 타일의 color 를 따른다(coral/cool).
+// name = 데이터 SSOT(CODE_BUCKETS.glyph · CERT_TRACKS.glyph · children.glyph) 또는 페이지에서 직접 지정.
+import { GLYPHS } from '../lib/glyphs.mjs'
+const { name, cls = '' } = Astro.props
+const paths = (GLYPHS[name] || GLYPHS.award).join('')
+---
+<svg class:list={['gi', cls]} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" set:html={paths}></svg>

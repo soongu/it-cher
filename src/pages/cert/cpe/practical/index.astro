@@ -1,0 +1,17 @@
+---
+import Base from '../../../../layouts/Base.astro'
+import ComingSoon from '../../../../components/ComingSoon.astro'
+import { certTrack } from '../../../../lib/content.mjs'
+const node = certTrack('cpe').children.find((c) => c.slug === 'practical')
+const p = node.preview
+---
+<Base title="정보처리기사 실기 — 준비중 · it-cher" desc={p.context}>
+  <ComingSoon
+    title="정보처리기사 실기"
+    context={p.context}
+    roadmap={p.roadmap}
+    live={p.live}
+    ctas={p.ctas}
+    crumbs={[{ href: '/', label: '홈' }, { href: '/cert/', label: '자격증' }, { href: '/cert/cpe/', label: '정보처리기사' }, { label: '실기' }]}
+  />
+</Base>

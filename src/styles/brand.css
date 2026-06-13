@@ -1,0 +1,205 @@
+/* ============================================================
+   it-cher — Design Tokens  ("Ink & Coral")  · SSOT
+   비전공자용 IT 자격증·코딩 통합 강의 허브
+   ------------------------------------------------------------
+   - 모든 값은 CSS custom property로 토큰화 (Astro/마크다운에 그대로 사용)
+   - 라이트 우선 + [data-theme="dark"] 오버라이드
+   - 한글 본문 가독성 최우선 / 코드 모노 별도
+   - 폰트: Pretendard(본문/UI) · 코드 모노 = Sarasa Mono K(자체호스팅 woff2, OFL) + JetBrains Mono 폴백
+   - 슬라이드 데크(iframe)는 자체 colors_and_type.css 를 쓰므로 이 토큰과 분리됨
+   ============================================================ */
+
+/* 코드 모노: 자체호스팅 Sarasa Mono K (SIL OFL-1.1 · woff2 서브셋 = 전체 한글 + 박스/블록/기하/화살표/CJK 부호).
+   듀오스페이스 — 한글 1글자 = ASCII·박스문자 2칸(advance 1000:500, 측정 검증). 그래서 코드블록 안
+   아스키아트(box-model 등)가 정렬된다. JetBrains Mono(시스템) + 시스템 한글 폴백은 advance 1:2가 안 맞아 깨졌음.
+   단일 Regular 파일을 전 weight(100–900)에 매핑 → 굵은 토큰도 시스템폴백이 아니라 faux-bold(advance 보존)로 처리.
+   라이선스 동봉: public/fonts/sarasa-mono-k.LICENSE.txt (배포 시 /fonts/ 로 함께 게시). */
+@font-face {
+  font-family: 'Sarasa Mono K';
+  src: url('/fonts/sarasa-mono-k.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* ========== 1. BRAND — Coral (#f0563f anchor) ========== */
+  --coral-50:  #fff3f0;
+  --coral-100: #ffe2da;
+  --coral-200: #ffc7b8;
+  --coral-300: #ffa28b;
+  --coral-400: #fb7559;
+  --coral-500: #f0563f;   /* accent / 시그니처 */
+  --coral-600: #d23922;   /* 기본 CTA — 흰 글자 대비 ≥4.5:1 (F16, 기존 #db3f28=4.42:1) */
+  --coral-700: #b62f1c;   /* hover/press */
+  --coral-800: #8f291a;
+  --coral-900: #74241a;
+
+  /* ========== 2. INK — cool-slate 그레이스케일 ========== */
+  --ink-0:   #ffffff;
+  --ink-50:  #f6f8fa;
+  --ink-100: #eef1f4;
+  --ink-200: #dfe4ea;
+  --ink-300: #c4ccd5;
+  --ink-400: #97a2af;
+  --ink-500: #6c7886;
+  --ink-600: #515d6b;
+  --ink-700: #3a4553;
+  --ink-800: #283341;
+  --ink-900: #1b2430;   /* 본문 잉크 */
+  --ink-950: #121922;
+
+  /* ========== 3. SEMANTIC (cool — 브랜드와 충돌 방지) ========== */
+  --ok:        #117a42;   --ok-bg:   #eafaf0;   --ok-border:   #b8e8cb;   /* F14: 글자 #15924f(3.7:1)→#117a42(5.0:1) AA */
+  --warn:      #b45309;   --warn-bg: #fdf3df;   --warn-border: #f3dba6;
+  --err:       #e11d48;   --err-bg:  #fff0f3;   --err-border:  #fbcdd8;
+  --info:      #0a7ea4;   --info-bg: #ecf8fd;   --info-border: #bce6f2;
+
+  /* ========== 4. SEMANTIC SURFACE / TEXT / BORDER (테마 전환 대상) ========== */
+  --surface-page:    var(--ink-50);    /* 앱 배경 */
+  --surface-card:    var(--ink-0);     /* 카드/패널 */
+  --surface-subtle:  var(--ink-100);   /* 옅은 섹션 */
+  --surface-warm:    #fff7f4;          /* 프로모/히어로 웜 워시 */
+  --surface-inset:   var(--ink-950);   /* 코드블록 등 다크 인셋 */
+  --surface-sticky:  rgba(255,255,255,0.82); /* 스티키 헤더 */
+
+  --text-strong:  var(--ink-900);
+  --text-default: var(--ink-800);
+  --text-muted:   var(--ink-500);
+  --text-faint:   #646f7d;   /* F14: #97a2af(2.4:1)→#646f7d — 흰 카드 5.1:1·페이지 #f6f8fa 4.8:1 모두 AA 4.5:1↑ (.deck-help 은 페이지면 위라 #6c7886=4.2:1로는 미달이었음) */
+  --text-inverse: var(--ink-0);
+
+  --border-subtle: var(--ink-100);
+  --border-default: var(--ink-200);
+  --border-strong:  var(--ink-300);
+
+  /* ----- Brand semantic ----- */
+  --brand:         var(--coral-600);
+  --brand-hover:   var(--coral-700);
+  --brand-text:    var(--coral-700);   /* 링크/텍스트용 (대비 ↑) */
+  --brand-fg:      #ffffff;            /* 브랜드 위 글자 */
+  --brand-tint:    var(--coral-50);    /* 옅은 브랜드 배경 */
+  --brand-tint-bd: var(--coral-200);
+
+  /* ========== 5. TYPE SCALE — 한글 본문 우선 ========== */
+  --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont,
+               'Apple SD Gothic Neo', 'Inter', 'Noto Sans KR', system-ui, sans-serif;
+  --font-mono: 'Sarasa Mono K', 'JetBrains Mono', 'D2Coding', ui-monospace, SFMono-Regular,
+               Menlo, Consolas, monospace;
+
+  --fs-display: 3.25rem;  /* 52 — 히어로 */
+  --fs-h1:      2.125rem; /* 34 */
+  --fs-h2:      1.625rem; /* 26 */
+  --fs-h3:      1.25rem;  /* 20 */
+  --fs-h4:      1.0625rem;/* 17 */
+  --fs-body-lg: 1.125rem; /* 18 — 문서 본문 */
+  --fs-body:    1rem;     /* 16 — UI 기본 */
+  --fs-sm:      0.875rem; /* 14 */
+  --fs-xs:      0.8125rem;/* 13 — 캡션/배지 */
+  --fs-code:    0.9375rem;/* 15 — 코드 */
+
+  --lh-tight:   1.18;     /* 디스플레이/제목 */
+  --lh-snug:    1.35;     /* 소제목 */
+  --lh-body:    1.75;     /* 한글 본문 — 넉넉하게 */
+  --lh-code:    1.62;
+
+  --ls-tight:  -0.02em;   /* 큰 제목 */
+  --ls-snug:   -0.01em;
+  --ls-normal: -0.003em;
+
+  --fw-regular: 400;
+  --fw-medium:  500;
+  --fw-semibold:600;
+  --fw-bold:    700;
+  --fw-extra:   800;
+
+  /* ========== 6. SPACING — 8pt 그리드 (반단계 4 포함) ========== */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+  --sp-8: 64px;
+  --sp-9: 96px;
+  --sp-10: 128px;
+
+  /* 레이아웃 폭 */
+  --w-doc:  680px;   /* 문서 본문 측정폭 — 본문 18px/한글 기준 한 줄 ≈38자(가독 최적대 25~45자 안쪽) */
+  --w-prose:840px;
+  --w-app:  1080px;  /* 인증 앱/리스트 */
+  --w-page: 1200px;  /* 랜딩 */
+
+  /* ========== 7. RADIUS ========== */
+  --r-xs:   6px;
+  --r-sm:   8px;
+  --r-md:   10px;   /* 버튼/인풋 */
+  --r-lg:   14px;
+  --r-xl:   18px;   /* 카드 */
+  --r-2xl:  24px;   /* 다이얼로그/큰 패널 */
+  --r-full: 999px;  /* 배지/필 */
+
+  /* ========== 8. SHADOW (중립, 컬러 그림자 없음) ========== */
+  --shadow-xs: 0 1px 2px rgba(18,25,34,0.05);
+  --shadow-sm: 0 1px 2px rgba(18,25,34,0.06), 0 1px 1px rgba(18,25,34,0.04);
+  --shadow-md: 0 4px 8px -2px rgba(18,25,34,0.08), 0 2px 4px -2px rgba(18,25,34,0.05);
+  --shadow-lg: 0 12px 24px -6px rgba(18,25,34,0.10), 0 4px 8px -4px rgba(18,25,34,0.05);
+  --shadow-xl: 0 24px 48px -12px rgba(18,25,34,0.16);
+  --shadow-brand: 0 12px 28px -10px rgba(219,63,40,0.45);  /* 히어로 CTA 강조 (절제) */
+
+  /* ========== 9. MOTION ========== */
+  --ease: cubic-bezier(.4,0,.2,1);
+  --dur-fast: 130ms;
+  --dur:      200ms;
+  --dur-slow: 300ms;
+
+  --focus-ring: 0 0 0 3px var(--coral-200), 0 0 0 1.5px var(--coral-500);
+
+  color-scheme: light;
+}
+
+/* ============================================================
+   DARK THEME — 의미 토큰만 재정의
+   ============================================================ */
+[data-theme="dark"] {
+  --surface-page:   #0e141b;
+  --surface-card:   #161e27;
+  --surface-subtle: #1c2630;
+  --surface-warm:   #20191a;
+  --surface-inset:  #0a0f15;
+  --surface-sticky: rgba(14,20,27,0.82);
+
+  --text-strong:  #f1f4f7;
+  --text-default: #d3dae2;
+  --text-muted:   #94a0ad;
+  --text-faint:   #76828f;   /* F14: 카드 위 대비 소폭 상향(#6c7886 미달) */
+  --text-inverse: #0e141b;
+
+  --border-subtle: #1f2a35;
+  --border-default: #29323d;
+  --border-strong:  #3a4553;
+
+  /* 다크에서는 한 단계 밝은 코랄로 대비 확보 */
+  --brand:        var(--coral-500);
+  --brand-hover:  var(--coral-400);
+  --brand-text:   var(--coral-300);
+  --brand-fg:     #1b0f0c;
+  --brand-tint:   rgba(240,86,63,0.12);
+  --brand-tint-bd: rgba(240,86,63,0.34);
+
+  --ok:     #2fc16b;               /* F14: 다크 배지/진도 녹색 글자 가독(라이트 #117a42는 다크 배경서 어두움) */
+  --ok-bg:  rgba(21,146,79,0.14);  --ok-border:  rgba(21,146,79,0.40);
+  --warn-bg:rgba(180,83,9,0.16);   --warn-border:rgba(180,83,9,0.42);
+  --err-bg: rgba(225,29,72,0.14);  --err-border: rgba(225,29,72,0.40);
+  --info-bg:rgba(10,126,164,0.16); --info-border:rgba(10,126,164,0.42);
+
+  --shadow-xs: 0 1px 2px rgba(0,0,0,0.4);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.45);
+  --shadow-md: 0 4px 10px -2px rgba(0,0,0,0.5);
+  --shadow-lg: 0 16px 30px -8px rgba(0,0,0,0.6);
+  --shadow-xl: 0 28px 56px -14px rgba(0,0,0,0.7);
+  --shadow-brand: 0 14px 30px -12px rgba(240,86,63,0.5);
+
+  color-scheme: dark;
+}

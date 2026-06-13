@@ -1,0 +1,12 @@
+# 복사해서 terraform.tfvars 로 쓰세요(terraform.tfvars 는 .gitignore 됨).
+# 기본값으로도 동작하므로(domain_name=it-cher.com) 대부분 그대로 두면 됩니다.
+
+aws_region  = "ap-northeast-2"
+domain_name = "it-cher.com"
+create_www  = true
+
+# 버킷명을 직접 지정하려면(전역 유니크 충돌 시):
+# bucket_name = "it-cher-com-site"
+
+# 엣지 범위(전세계로 넓히려면):
+# price_class = "PriceClass_All"

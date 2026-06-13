@@ -1,0 +1,98 @@
+---
+// '준비중' 랜딩 — 빈 가지를 막다른 길이 아니라 정보+유입 접점으로.
+// 구성 미리보기(공개 시험/커리큘럼 라벨만; 강의대본 본문 비노출, 불변식 #2) + 라이브 대체링크 + 퍼널 CTA.
+import { FUNNELS } from '../lib/links.mjs'
+import FunnelCta from './FunnelCta.astro'
+import Crumbs from './Crumbs.astro'
+
+const { title, context, roadmap = [], live = null, ctas = [], crumbs = [] } = Astro.props
+// 공용 Crumbs 는 '홈'을 자동으로 붙인다 — 호출부가 홈을 포함해 넘겼으면(레거시 계약) 한 번만 벗겨서 전달.
+const crumbTrail = crumbs.length && crumbs[0]?.href === '/' ? crumbs.slice(1) : crumbs
+
+const CTA = {
+  klue:    { label: 'Klue 앱',          cls: 'btn' },
+  eduwill: { label: '에듀윌 강의',       cls: 'btn btn--secondary' },
+  sparta:  { label: '팀스파르타 내일배움캠프', cls: 'btn' },
+}
+---
+<div class="page" data-pagefind-ignore>
+  {crumbs.length > 0 && <Crumbs trail={crumbTrail} />}
+
+  <div class="page-head">
+    <span class="cs-badge">🚧 준비중</span>
+    <h1>{title}</h1>
+    {context && <p class="lede">{context}</p>}
+  </div>
+
+  {roadmap.length > 0 && (
+    <div class="cs-roadmap">
+      <p class="eyebrow">예정 구성</p>
+      <ul class="cs-list">
+        {roadmap.map((r) => <li>{r}</li>)}
+      </ul>
+    </div>
+  )}
+
+  {live && (
+    <a class="cs-live" href={live.href}>
+      <span class="cs-live-ico">▶</span>
+      <span class="cs-live-body">
+        <span class="cs-live-eyebrow">그동안 이걸 해보세요</span>
+        <span class="cs-live-label">{live.label}</span>
+      </span>
+      <span class="cs-live-arrow">→</span>
+    </a>
+  )}
+
+  {ctas.length > 0 && (
+    <div class="cta-band">
+      <p class="eyebrow">막막하다면</p>
+      <h3 class="t-h3">합격·완주까지 함께</h3>
+      <p>초개인화 학습앱과 공식 강의로 다음 단계까지 이어가세요.</p>
+      <div class="cta-row">
+        {ctas.map((k) => <FunnelCta funnel={FUNNELS[k]} label={CTA[k].label} class={CTA[k].cls} />)}
+      </div>
+    </div>
+  )}
+</div>
+
+<style>
+  .cs-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 12px; border-radius: 999px; margin-bottom: var(--sp-3);
+    font-size: var(--fs-xs); font-weight: var(--fw-bold);
+    color: var(--text-muted); background: var(--surface-subtle); border: 1px solid var(--border-default);
+  }
+  .cs-roadmap { margin-bottom: var(--sp-6); }
+  .cs-roadmap .eyebrow { margin-bottom: var(--sp-3); }
+  .cs-list {
+    list-style: none; margin: 0; padding: 0;
+    display: flex; flex-direction: column;
+    border: 1px solid var(--border-default); border-radius: var(--r-xl); overflow: hidden; background: var(--surface-card);
+  }
+  .cs-list li {
+    padding: var(--sp-4); border-top: 1px solid var(--border-subtle);
+    color: var(--text-strong); font-size: var(--fs-body); display: flex; align-items: center; gap: var(--sp-3);
+  }
+  .cs-list li:first-child { border-top: none; }
+  .cs-list li::before {
+    content: ""; width: 7px; height: 7px; border-radius: 50%; flex: none;
+    background: var(--border-strong);
+  }
+  .cs-live {
+    display: flex; align-items: center; gap: var(--sp-4);
+    padding: var(--sp-4) var(--sp-5); margin-bottom: var(--sp-6);
+    border: 1px solid var(--brand-tint-bd); border-radius: var(--r-xl);
+    background: var(--brand-tint); color: inherit;
+    transition: background var(--dur-fast) var(--ease), transform var(--dur-fast) var(--ease);
+  }
+  .cs-live:hover { text-decoration: none; transform: translateY(-1px); }
+  .cs-live-ico {
+    width: 36px; height: 36px; flex: none; border-radius: 50%; display: grid; place-items: center;
+    background: var(--brand-text); color: #fff; font-size: 13px;
+  }
+  .cs-live-body { display: flex; flex-direction: column; flex: 1; }
+  .cs-live-eyebrow { font-size: var(--fs-xs); color: var(--brand-text); font-weight: var(--fw-bold); }
+  .cs-live-label { font-size: var(--fs-body); font-weight: var(--fw-semibold); color: var(--text-strong); }
+  .cs-live-arrow { color: var(--brand-text); font-weight: var(--fw-bold); }
+</style>

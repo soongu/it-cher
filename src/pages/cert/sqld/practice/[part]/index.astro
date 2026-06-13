@@ -1,0 +1,71 @@
+---
+import Base from '../../../../../layouts/Base.astro'
+import Crumbs from '../../../../../components/Crumbs.astro'
+import { sqldParts } from '../../../../../lib/content.mjs'
+import { FUNNELS } from '../../../../../lib/links.mjs'
+import FunnelCta from '../../../../../components/FunnelCta.astro'
+import Pager from '../../../../../components/Pager.astro'
+import LecProgress from '../../../../../components/LecProgress.astro'
+import DeckEmbed from '../../../../../components/DeckEmbed.astro'
+import SlideStudyGuide from '../../../../../components/SlideStudyGuide.astro'
+import CompletionBanner from '../../../../../components/CompletionBanner.astro'
+
+export function getStaticPaths() {
+  // SQLD 부 정렬 배열의 앞뒤 부 → 페이저(막다른 길 방지).
+  const parts = sqldParts()
+  const mk = (x) => (x ? { href: `/cert/sqld/practice/${x.slug}/`, label: `${x.num}부 · ${x.topic}` } : null)
+  return parts.map((p, i) => ({ params: { part: p.slug }, props: { part: p, prev: mk(parts[i - 1]), next: mk(parts[i + 1]), index: i + 1, total: parts.length } }))
+}
+
+const { part, prev, next, index, total } = Astro.props
+const lecKey = `/cert/sqld/practice/${part.slug}/`
+const deckSrc = `${part.deck}/index.html`
+// 구조화데이터: 무료 Course(제목/메타만 — 강의대본 본문 미포함, 불변식 #2).
+const course = {
+  '@context': 'https://schema.org', '@type': 'Course',
+  name: `SQLD ${part.num}부 · ${part.topic}`,
+  description: `SQLD 벼락치기 모의고사 ${part.num}부 ${part.topic} 슬라이드`,
+  url: `https://it-cher.com${lecKey}`,
+  inLanguage: 'ko-KR', isAccessibleForFree: true,
+  provider: { '@type': 'EducationalOrganization', name: 'it-cher', '@id': 'https://it-cher.com/#org' },
+}
+---
+<Base title={`SQLD ${part.num}부 · ${part.topic} — 벼락치기 모의고사 · it-cher`} desc={`SQLD 벼락치기 모의고사 ${part.num}부 ${part.topic} 슬라이드`} ogType="article" jsonLd={course}>
+  <div class="slide-page">
+    <Crumbs trail={[{ href: '/cert/', label: '자격증' }, { href: '/cert/sqld/', label: 'SQLD' }, { href: '/cert/sqld/practice/', label: '문제풀이' }, { label: `${part.num}부` }]} />
+
+    {/* 검색 색인 대상은 이 제목/메타뿐(data-pagefind-body) — 강의대본 본문·슬라이드 내용은 색인 안 됨(불변식 #2). */}
+    <header class="slide-head" data-pagefind-body>
+      <h1>{part.num}부 · {part.topic}</h1>
+      <p class="slide-sub">SQLD 벼락치기 모의고사 · 슬라이드 강의</p>
+    </header>
+
+    <LecProgress index={index} total={total} unit="부" groupLabel="SQLD 벼락치기" lecKey={lecKey} lecLabel={`${part.num}부 · ${part.topic}`} />
+
+    {/* H1: 슬라이드(=핵심 콘텐츠)를 먼저, 학습 가이드는 데크 아래로 + 기본 접힘(F02·F07·F18). */}
+    <DeckEmbed src={deckSrc} label={`${part.num}부 · ${part.topic}`} title={part.topic} />
+
+    <SlideStudyGuide topic={part.topic} context="SQLD 벼락치기 모의고사" tip="SQLD는 SQL 문법과 데이터 모델링이 핵심이에요. 슬라이드의 쿼리 예시는 눈으로만 보지 말고 직접 손으로 따라 써보세요." />
+
+    <Pager prev={prev} next={next} list={{ href: '/cert/sqld/practice/', label: 'SQLD 벼락치기' }} />
+
+    {/* H6(F06): 마지막 부(다음 없음)에서 완주 배너로 조망(/map) 이어주기 — 막다른 길 해소(코딩·정처기와 동일 패턴). */}
+    {!next && <CompletionBanner href="/map/" eyebrow="SQLD 벼락치기 모의고사를 끝까지 봤어요 🎉" title="다른 트랙도 둘러보기 →" />}
+
+    <span data-lec-end aria-hidden="true"></span>
+    <div class="cta-band">
+      <p class="eyebrow">SQLD 합격까지</p>
+      <h3 class="t-h3">약점 유형을 집중 공략하려면</h3>
+      <p>초개인화 학습앱 Klue로 틀린 유형을 집중 공략하고, 에듀윌 온라인강의로 개념까지 정리하세요.</p>
+      {/* F22: 준비중 Klue 동안은 라이브 채널(에듀윌)을 primary·앞으로. Klue 런칭(comingSoon 제거) 시 자동 복귀. */}
+      <div class="cta-row">{FUNNELS.klue.comingSoon
+        ? <><FunnelCta funnel={FUNNELS.eduwill} label="에듀윌 강의" /><FunnelCta funnel={FUNNELS.klue} label="Klue 앱" /></>
+        : <><FunnelCta funnel={FUNNELS.klue} label="Klue 앱" /><FunnelCta funnel={FUNNELS.eduwill} label="에듀윌 강의" class="btn btn--secondary" /></>}</div>
+    </div>
+  </div>
+</Base>
+
+<style>
+  .slide-page { max-width: 1180px; margin-inline: auto; padding: var(--sp-6) var(--sp-5) 0; }
+  @media (max-width: 760px) { .slide-page { padding-inline: var(--sp-3); } }
+</style>

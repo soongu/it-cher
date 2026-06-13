@@ -1,0 +1,24 @@
+---
+// 그룹(토픽/과목) 진도 요약 — 읽은 강 수 바 + 이어보기. 빌드타임엔 0%로 렌더하고,
+// Base.astro 런타임이 localStorage 를 읽어 data-* 계약으로 채운다(읽은 수·%·이어보기 대상).
+//   items: [{ h:<강 URL = 목록 href 와 동일>, l:<라벨> }] 순서 배열. 빈 배열이면 렌더 안 함.
+const { items = [], showResume = true, unit = '강' } = Astro.props
+const list = items.filter((x) => x && x.h).map((x) => ({ h: x.h, l: x.l || '' }))
+const total = list.length
+const json = JSON.stringify(list)
+---
+{total > 0 && (
+  <div class="prog-summary" data-prog data-prog-items={json}>
+    <div class="ps-line">
+      <span class="ps-count">읽은 {unit} <b><span data-prog-count>0 / {total}</span></b></span>
+      <span class="ps-pct" data-prog-pct>0%</span>
+    </div>
+    <div class="ps-bar"><i data-prog-fill style="width:0%"></i></div>
+    {showResume && (
+      <a class="ps-resume" data-prog-resume href={list[0].h}>
+        <span class="ps-resume-todo">이어보기 <b data-prog-resume-label>{list[0].l}</b> →</span>
+        <span class="ps-resume-done">전체 완료 🎉 처음부터 다시 보기 →</span>
+      </a>
+    )}
+  </div>
+)}

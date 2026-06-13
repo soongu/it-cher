@@ -1,0 +1,37 @@
+---
+import Base from '../../../../layouts/Base.astro'
+import Crumbs from '../../../../components/Crumbs.astro'
+import { sqldParts } from '../../../../lib/content.mjs'
+import ProgressGroup from '../../../../components/ProgressGroup.astro'
+const parts = sqldParts()
+const progItems = parts.map((p) => ({ h: `/cert/sqld/practice/${p.slug}/`, l: `${p.num}부 · ${p.topic}` }))
+---
+<Base title="SQLD 문제풀이 — 벼락치기 모의고사 · it-cher" desc="SQLD 핵심 유형을 부별로 빠르게 풀이하는 벼락치기 모의고사 슬라이드.">
+  <div class="page">
+    <Crumbs trail={[{ href: '/cert/', label: '자격증' }, { href: '/cert/sqld/', label: 'SQLD' }, { label: '문제풀이' }]} />
+    <div class="page-head">
+      <h1>벼락치기 모의고사</h1>
+      <p class="lede">핵심 유형을 부별로 빠르게 풀이합니다. 시험 직전 약점 유형만 골라 돌려보세요.</p>
+    </div>
+
+    {parts.length === 0 ? (
+      <div class="empty">준비중입니다.</div>
+    ) : (
+      <>
+        <div style="margin-bottom: var(--sp-5);"><ProgressGroup items={progItems} unit="부" /></div>
+        <div class="lec-list">
+          {parts.map((p) => {
+            const href = `/cert/sqld/practice/${p.slug}/`
+            return (
+            <a class="lec-row" href={href} data-read-key={href}>
+              <span class="lec-num">{p.num}부</span>
+              <span><span class="lec-title">{p.topic}</span></span>
+              <span class="lec-meta"><span class="row-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>읽음</span><span class="badge badge--slide">슬라이드</span></span>
+            </a>
+            )
+          })}
+        </div>
+      </>
+    )}
+  </div>
+</Base>

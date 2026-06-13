@@ -1,0 +1,29 @@
+---
+import Base from '../../../../layouts/Base.astro'
+import Crumbs from '../../../../components/Crumbs.astro'
+import { certNode, cpeSubjects } from '../../../../lib/content.mjs'
+import HubCard from '../../../../components/HubCard.astro'
+
+const written = certNode('cpe', 'written')
+const subjects = cpeSubjects()
+const deckCount = subjects.reduce((n, s) => n + s.lectures.filter((l) => l.deck).length, 0)
+const meta = {
+  theory: `1~5과목 · 슬라이드 ${deckCount}개`,
+  practice: '곧 공개',
+}
+---
+<Base title="정보처리기사 필기 — 이론 · 문제풀이 · it-cher" desc="정보처리기사 필기 이론과 문제풀이. 5과목 핵심 슬라이드부터 학습하세요.">
+  <div class="page">
+    <Crumbs trail={[{ href: '/cert/', label: '자격증' }, { href: '/cert/cpe/', label: '정보처리기사' }, { label: '필기' }]} />
+    <div class="page-head">
+      <h1>필기</h1>
+      <p class="lede">먼저 <b>이론</b>으로 과목별 핵심을 잡고, <b>문제풀이</b>로 기출 유형을 굳히는 흐름이에요.</p>
+    </div>
+
+    <div class="grid grid-2">
+      {written.children.map((c) => (
+        <HubCard href={c.href} glyph={c.glyph} title={c.label} sub={c.sub} status={c.status} meta={meta[c.slug]} />
+      ))}
+    </div>
+  </div>
+</Base>

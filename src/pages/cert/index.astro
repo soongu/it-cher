@@ -1,0 +1,43 @@
+---
+import Base from '../../layouts/Base.astro'
+import Crumbs from '../../components/Crumbs.astro'
+import { CERT_TRACKS, cpeSubjects, sqldParts } from '../../lib/content.mjs'
+import { FUNNELS } from '../../lib/links.mjs'
+import FunnelCta from '../../components/FunnelCta.astro'
+import HubCard from '../../components/HubCard.astro'
+
+const cpe = cpeSubjects()
+const sqld = sqldParts()
+const cpeDecks = cpe.reduce((n, s) => n + s.lectures.filter((l) => l.deck).length, 0)
+const meta = {
+  cpe: `필기 이론 · 슬라이드 ${cpeDecks}개`,
+  sqld: `문제풀이 ${sqld.length}부 · 슬라이드`,
+  adsp: '준비중',
+  'aws-saa': '준비중',
+}
+---
+<Base title="자격증 — 정처기·SQLD·ADsP·AWS SAA · it-cher" desc="비전공자를 위한 IT 자격증 무료 슬라이드 강의. 정처기 필기·SQLD 운영 중.">
+  <div class="page">
+    <Crumbs trail={[{ label: '자격증' }]} />
+    <div class="page-head">
+      <h1>자격증</h1>
+      <p class="lede">시험 합격이 목표라면 여기서 시작하세요. 시험 구조 그대로 따라가며, 핵심만 압축한 정리 슬라이드로 학습합니다.</p>
+    </div>
+
+    <div class="grid grid-4">
+      {CERT_TRACKS.map((t) => (
+        <HubCard href={t.href} glyph={t.glyph} title={t.label} sub={t.sub} status={t.status} meta={meta[t.slug]} />
+      ))}
+    </div>
+
+    <div class="cta-band">
+      <p class="eyebrow">합격까지</p>
+      <h3 class="t-h3">정처기·SQLD, 혼자 막막하다면</h3>
+      <p>초개인화 학습앱 Klue와 에듀윌 온라인강의로 합격까지 이어가세요.</p>
+      {/* F22: 준비중 Klue 동안은 라이브 채널(에듀윌)을 primary·앞으로 — 클릭 가능한 전환을 코랄 자리에. Klue 런칭(comingSoon 제거) 시 자동 복귀. */}
+      <div class="cta-row">{FUNNELS.klue.comingSoon
+        ? <><FunnelCta funnel={FUNNELS.eduwill} label="에듀윌 강의" /><FunnelCta funnel={FUNNELS.klue} label="Klue 앱" /></>
+        : <><FunnelCta funnel={FUNNELS.klue} label="Klue 앱" /><FunnelCta funnel={FUNNELS.eduwill} label="에듀윌 강의" class="btn btn--secondary" /></>}</div>
+    </div>
+  </div>
+</Base>

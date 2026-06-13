@@ -1,0 +1,23 @@
+---
+// 퍼널 CTA 버튼 — 브랜드 로고 + 라벨. cta-band(.cta-row)의 버튼을 이걸로 통일해
+//   모든 CTA에 브랜드 로고가 일관 노출되게 한다(로고 자산은 SSOT links.mjs FUNNELS.logoImg).
+// comingSoon이면 내부 FunnelLink가 '준비중' 비활성 처리, 아니면 외부 새 탭(↗).
+//   props: funnel(필수, FUNNELS.*) · label(버튼 문구) · class(기본 'btn' — 보조버튼은 'btn btn--secondary')
+// F22: 준비중(comingSoon) 채널은 어디서 호출하든 보조(btn--secondary)로 강등 — 비활성 버튼이
+//   코랄 primary 자리를 차지하지 못하게(전 페이지 SSOT). links.mjs 에서 comingSoon 만 지우면
+//   호출부가 준 class 로 자동 복귀(라이브 승격). 라이브 채널의 primary 승격은 호출부에서 한다.
+import FunnelLink from './FunnelLink.astro'
+const { funnel, label, class: cls = 'btn' } = Astro.props
+const effClass = funnel?.comingSoon ? 'btn btn--secondary' : cls
+---
+<FunnelLink funnel={funnel} class={effClass}>{funnel?.logoImg && <img class:list={['cta-logo', `is-${funnel.logoFit ?? 'contain'}`]} src={funnel.logoImg} alt="" aria-hidden="true" loading="lazy" />}<span class="cta-label">{label}</span></FunnelLink>
+
+<style>
+  /* 버튼 안 브랜드 로고: is-fill=정사각 심볼(Klue) · is-contain=워드마크(에듀윌·팀스파르타, 자연비율로 안 짤리게) */
+  .cta-logo { flex: none; display: inline-block; vertical-align: middle; }
+  .cta-logo.is-fill { width: 20px; height: 20px; border-radius: 5px; object-fit: cover; }
+  /* F26: 워드마크는 흰 칩 위에 올려 유색(코랄)·다크 버튼 어디서든 가독성 확보(푸터 .fn-logo--img.is-contain 와 동일 처리).
+     content-box 라 height=이미지 높이 + 패딩이 칩 여백이 된다. */
+  .cta-logo.is-contain { box-sizing: content-box; height: 16px; width: auto; max-width: 104px; object-fit: contain; background: #fff; border-radius: 4px; padding: 3px 6px; border: 1px solid rgba(0,0,0,.06); }
+  .cta-label { display: inline-flex; align-items: center; }
+</style>

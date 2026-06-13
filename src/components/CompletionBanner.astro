@@ -1,0 +1,17 @@
+---
+// 그룹(과목/부) 끝 완주 배너 — 막다른 길 방지(H6/F06). 코딩 트랙 .next-topic 패턴을 컴포넌트화해
+//   자격증 트랙(정처기 과목 경계·SQLD 벼락치기 끝)에도 같은 모양으로 적용한다.
+//   props: href(필수, 다음 그룹/조망) · eyebrow(작은 안내문) · title(굵은 링크 라벨)
+const { href, eyebrow, title } = Astro.props
+---
+<a class="completion-banner" href={href}>
+  <span class="cb-eyebrow">{eyebrow}</span>
+  <span class="cb-title">{title}</span>
+</a>
+
+<style>
+  .completion-banner { display:flex; flex-direction:column; gap:4px; padding: var(--sp-5); margin: var(--sp-5) 0 var(--sp-6); border:1px solid var(--brand-tint-bd); border-radius: var(--r-lg); background: var(--brand-tint); }
+  .completion-banner:hover { text-decoration:none; border-color: var(--brand); }
+  .cb-eyebrow { font-size: var(--fs-xs); font-weight: var(--fw-bold); color: var(--brand-text); }
+  .cb-title { font-size: var(--fs-h4); font-weight: var(--fw-bold); color: var(--text-strong); }
+</style>

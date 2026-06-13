@@ -1,0 +1,40 @@
+---
+import Base from '../../../layouts/Base.astro'
+import Crumbs from '../../../components/Crumbs.astro'
+import { certTrack, sqldParts } from '../../../lib/content.mjs'
+import { FUNNELS } from '../../../lib/links.mjs'
+import FunnelCta from '../../../components/FunnelCta.astro'
+import HubCard from '../../../components/HubCard.astro'
+
+const sqld = certTrack('sqld')
+const parts = sqldParts()
+const meta = {
+  theory: '곧 공개',
+  practice: `벼락치기 ${parts.length}부 · 슬라이드`,
+}
+---
+<Base title="SQLD — 이론 · 문제풀이 · it-cher" desc="SQL 개발자(SQLD) 이론과 문제풀이. 벼락치기 모의고사로 핵심 유형을 빠르게 풀어보세요.">
+  <div class="page">
+    <Crumbs trail={[{ href: '/cert/', label: '자격증' }, { label: 'SQLD' }]} />
+    <div class="page-head">
+      <h1>SQLD</h1>
+      <p class="lede">SQL 개발자 자격증. 지금은 <b>문제풀이 — 벼락치기 모의고사</b>가 공개돼 있어요.</p>
+    </div>
+
+    <div class="grid grid-2">
+      {sqld.children.map((c) => (
+        <HubCard href={c.href} glyph={c.glyph} title={c.label} sub={c.sub} status={c.status} meta={meta[c.slug]} />
+      ))}
+    </div>
+
+    <div class="cta-band">
+      <p class="eyebrow">SQLD 합격까지</p>
+      <h3 class="t-h3">약점 유형을 집중 공략하려면</h3>
+      <p>초개인화 학습앱 Klue로 틀린 유형을 집중 공략하고, 에듀윌 온라인강의로 개념까지 정리하세요.</p>
+      {/* F22: 준비중 Klue 동안은 라이브 채널(에듀윌)을 primary·앞으로. Klue 런칭(comingSoon 제거) 시 자동 복귀. */}
+      <div class="cta-row">{FUNNELS.klue.comingSoon
+        ? <><FunnelCta funnel={FUNNELS.eduwill} label="에듀윌 강의" /><FunnelCta funnel={FUNNELS.klue} label="Klue 앱" /></>
+        : <><FunnelCta funnel={FUNNELS.klue} label="Klue 앱" /><FunnelCta funnel={FUNNELS.eduwill} label="에듀윌 강의" class="btn btn--secondary" /></>}</div>
+    </div>
+  </div>
+</Base>

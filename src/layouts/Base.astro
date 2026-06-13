@@ -1,0 +1,765 @@
+---
+import '../styles/brand.css'
+import '../styles/doc.css'
+import { CERT_TRACKS, CODE_BUCKETS, bucketIsLive } from '../lib/content.mjs'
+import { FUNNEL_LIST } from '../lib/links.mjs'
+import { GA_MEASUREMENT_ID } from '../lib/analytics.mjs'
+import ExtLink from '../components/ExtLink.astro'
+import FunnelLink from '../components/FunnelLink.astro'
+import Glyph from '../components/Glyph.astro'
+const {
+  title = 'it-cher',
+  desc = '',
+  // 페이지별 SEO 오버라이드(선택). ogType=강 상세는 'article', 기본 'website'.
+  ogType = 'website',
+  image = '/og/og-default.png',      // 공유 카드(1200×630). 페이지가 고유 OG 이미지를 주면 교체.
+  jsonLd = null,                     // 페이지 고유 구조화데이터(Course 등). 전역 Org/WebSite 위에 추가됨.
+  noindex = false,                   // 404 등 색인 제외 페이지 → <meta robots noindex>.
+} = Astro.props
+// 브랜드 마크 = SOON9 캐릭터 로고(원형 배지+코랄 링) /img/logo-mark.png — 헤더·드로어·푸터 공용
+
+// ── SEO/소셜 메타 (절대 URL은 astro.config 의 site= 기준) ─────────────────
+// canonical/og:url 은 트레일링슬래시 URL(진도키·내부링크와 동일 규칙) — Astro.url.pathname 이 directory 포맷이라 '/about/' 형태.
+const ORIGIN = Astro.site ? Astro.site.origin : 'https://it-cher.com'
+const canonical = new URL(Astro.url.pathname, Astro.site || 'https://it-cher.com').href
+const ogImage = new URL(image, Astro.site || 'https://it-cher.com').href
+
+// F34/F42: 헤더 내비 현재 섹션 표시 — 경로 프리픽스 매칭으로 해당 .nav-link 에 is-active(코랄 하단보더) + aria-current="page".
+const navPath = Astro.url.pathname
+const navActive = (p) => navPath === p || navPath.startsWith(p)
+
+// 전역 구조화데이터: 발행처(EducationalOrganization) + 사이트(WebSite). 강의대본 본문은 절대 포함 안 함(메타만).
+const ORG_ID = `${ORIGIN}/#org`
+const orgLd = {
+  '@context': 'https://schema.org',
+  '@type': 'EducationalOrganization',
+  '@id': ORG_ID,
+  name: 'it-cher',
+  alternateName: '잇처',
+  url: `${ORIGIN}/`,
+  logo: `${ORIGIN}/img/logo-mark.png`,
+  image: ogImage,
+  description: '비전공자를 위한 IT 자격증·코딩 무료 강의자료.',
+  parentOrganization: { '@type': 'Organization', name: 'Theo Labs' },
+  founder: {
+    '@type': 'Person',
+    name: '홍순구',
+    jobTitle: 'IT 자격증·풀스택 프로그래밍 튜터',
+    sameAs: ['https://instagram.com/soongu_hong', 'https://github.com/soongu'],
+  },
+  sameAs: ['https://instagram.com/soongu_hong', 'https://github.com/soongu'],
+}
+const websiteLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  '@id': `${ORIGIN}/#website`,
+  name: 'it-cher',
+  url: `${ORIGIN}/`,
+  inLanguage: 'ko-KR',
+  publisher: { '@id': ORG_ID },
+}
+const ldBlocks = [websiteLd, orgLd, ...(Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [])]
+// 하나의 ld+json 블록 안에는 단일 JSON 값만 유효 → 여러 노드는 JSON '배열'로 감싼다(객체를 줄바꿈으로 잇는 건 무효 JSON).
+// '<' 만 이스케이프해 닫는 스크립트 종료 토큰이 새지 않게 한다(콘텐츠엔 '<' 없음, 방어용).
+//  (주석에 리터럴 script 태그를 쓰면 Vite dev 의존성 사전스캔이 인라인 스크립트로 오인하므로 풀어 쓴다.)
+const ldJson = JSON.stringify(ldBlocks).replace(/</g, '\\u003c')
+---
+<!doctype html>
+<html lang="ko" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{title}</title>
+  {desc && <meta name="description" content={desc} />}
+  {noindex && <meta name="robots" content="noindex,follow" />}
+  <link rel="canonical" href={canonical} />
+  <link rel="icon" type="image/png" href="/img/logo-mark.png" />
+  <link rel="apple-touch-icon" href="/img/logo-mark.png" />
+  {/* GA4 — 측정 ID는 src/lib/analytics.mjs(SSOT). prod 빌드에서만 태그를 넣고(로컬 dev HTML 비오염),
+       런타임에도 it-cher.com 에서만 측정해 로컬 preview·공개 미러 호스팅이 같은 속성에 hit 를 안 보낸다. */}
+  {import.meta.env.PROD && GA_MEASUREMENT_ID && (
+    <>
+      <script is:inline async src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}></script>
+      <script define:vars={{ gaId: GA_MEASUREMENT_ID }}>
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){ dataLayer.push(arguments); }
+        if (location.hostname === 'it-cher.com' || location.hostname === 'www.it-cher.com') {
+          gtag('js', new Date());
+          gtag('config', gaId);
+        }
+      </script>
+    </>
+  )}
+  {/* Open Graph — 카카오톡·슬랙·페북 등 공유 카드 */}
+  <meta property="og:type" content={ogType} />
+  <meta property="og:site_name" content="it-cher" />
+  <meta property="og:locale" content="ko_KR" />
+  <meta property="og:url" content={canonical} />
+  <meta property="og:title" content={title} />
+  {desc && <meta property="og:description" content={desc} />}
+  <meta property="og:image" content={ogImage} />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="it-cher — 비전공자를 위한 IT 자격증·코딩 무료 강의" />
+  {/* Twitter/X 카드 */}
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={title} />
+  {desc && <meta name="twitter:description" content={desc} />}
+  <meta name="twitter:image" content={ogImage} />
+  <meta name="twitter:image:alt" content="it-cher — 비전공자를 위한 IT 자격증·코딩 무료 강의" />
+  {/* 구조화데이터(JSON-LD): 전역 WebSite+Organization (+페이지가 주면 Course 등 추가) */}
+  <script type="application/ld+json" is:inline set:html={ldJson} />
+  {/* 무플래시 테마 복원 — 페인트 전에 적용 */}
+  <script is:inline>try{var t=localStorage.getItem('hc-theme');if(t)document.documentElement.setAttribute('data-theme',t);}catch(e){}</script>
+  {/* 폰트: Pretendard(본문/UI) · JetBrains Mono(코드) */}
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  {/* F46: JetBrains Mono CSS(googleapis)+woff2(gstatic) 외부 2원천 사전연결 → DNS+TLS 왕복 단축 */}
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  {/* 코드 모노 1순위: 자체호스팅 Sarasa Mono K(woff2 576KB, OFL) — 한글=2칸·ASCII/박스=1칸 듀오스페이스라
+      코드블록 아스키아트가 정렬된다. 자주 쓰여 preload(자체호스팅도 폰트는 CORS fetch → crossorigin 필수). */}
+  <link rel="preload" href="/fonts/sarasa-mono-k.woff2" as="font" type="font/woff2" crossorigin />
+  {/* H8: dynamic-subset(가변폰트) — unicode-range 로 페이지 실사용 글리프만 로드(풀폰트 4.53MB→수십~수백KB).
+       --font-sans 가 이미 'Pretendard Variable' 우선이라 무결 교체(brand.css). */}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <a class="skip-link" href="#main">본문 바로가기</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="/"><img class="brand-mark" src="/img/logo-mark.png" alt="" width="32" height="32" /><span class="brand-name">it<i class="hy">-</i><b>cher</b></span></a>
+
+      <nav class="nav">
+        <div class="nav-item">
+          <a class:list={['nav-link', { 'is-active': navActive('/code/') }]} href="/code/" aria-current={navActive('/code/') ? 'page' : undefined}>코딩 <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></a>
+          <div class="nav-panel nav-panel--wide" id="navpanel-code"><div class="nav-panel-grid nav-panel-grid--2col" data-nav-grid="code">
+            {CODE_BUCKETS.map((b) => {
+              const live = bucketIsLive(b)
+              return (
+                <a class="nav-opt" href={`/code/${b.slug}/`} data-nav-key={`code:${b.slug}`}>
+                  <span class="nav-opt-ico is-cool"><Glyph name={b.glyph} /></span>
+                  <span class="nav-opt-body"><span class="nav-opt-title">{b.label}</span><span class="nav-opt-sub">{b.subtitle}</span></span>
+                  {live
+                    ? <span class="badge badge--live"><span class="dot"></span>운영</span>
+                    : <span class="badge badge--planned"><span class="dot"></span>예정</span>}
+                </a>
+              )
+            })}
+            {/* 온보딩(/start) 진단 시 ITcherNav 가 .is-narrowed 부여 → 추천만 남기고 이 토글로 전체 복구(세션). 무진단/무JS시 CSS로 숨김. */}
+            <button type="button" class="nav-showall" data-nav-showall aria-expanded="false">
+              <span class="nav-showall-txt">전체 분야 보기</span>
+              <svg class="nav-showall-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
+          </div></div>
+        </div>
+
+        <div class="nav-item">
+          <a class:list={['nav-link', { 'is-active': navActive('/cert/') }]} href="/cert/" aria-current={navActive('/cert/') ? 'page' : undefined}>자격증 <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></a>
+          <div class="nav-panel" id="navpanel-cert"><div class="nav-panel-grid">
+            {CERT_TRACKS.map((t) => (
+              <a class="nav-opt" href={t.href}>
+                <span class="nav-opt-ico"><Glyph name={t.glyph} /></span>
+                <span class="nav-opt-body"><span class="nav-opt-title">{t.label}</span><span class="nav-opt-sub">{t.sub}</span></span>
+                {t.status === 'live'
+                  ? <span class="badge badge--live"><span class="dot"></span>운영</span>
+                  : <span class="badge badge--planned"><span class="dot"></span>예정</span>}
+              </a>
+            ))}
+          </div></div>
+        </div>
+
+        <a class:list={['nav-link', { 'is-active': navActive('/map/') }]} href="/map/" aria-current={navActive('/map/') ? 'page' : undefined}>커리큘럼</a>
+        <a class:list={['nav-link', { 'is-active': navActive('/start/') }]} href="/start/" aria-current={navActive('/start/') ? 'page' : undefined}>시작하기</a>
+        <a class:list={['nav-link', { 'is-active': navActive('/about/') }]} href="/about/" aria-current={navActive('/about/') ? 'page' : undefined}>소개</a>
+      </nav>
+
+      <div class="header-actions">
+        <button class="icon-btn" data-search-open aria-label="검색 (단축키 /)" title="검색  ·  / 키">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        </button>
+        <a class="btn btn--sm" href="/start/">무료로 시작 →</a>
+        <button class="theme-toggle" data-theme-toggle aria-label="라이트/다크 테마 전환">
+          <svg class="moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+          <svg class="sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg>
+        </button>
+      </div>
+
+      {/* 모바일 햄버거 (≤760px 노출) */}
+      <button class="nav-toggle" aria-label="메뉴 열기" aria-expanded="false" aria-controls="mobile-drawer" aria-haspopup="dialog">
+        <span class="bars"><span></span><span></span><span></span></span>
+      </button>
+    </div>
+  </header>
+
+  {/* ============ 모바일 드로어 (≤760px) — claude.ai/design 핸드오프 ② ============ */}
+  <div class="drawer-scrim" data-drawer-scrim></div>
+  <aside class="drawer" id="mobile-drawer" role="dialog" aria-modal="true" aria-label="모바일 메뉴" aria-hidden="true">
+    <div class="drawer-head">
+      <a class="brand" href="/"><img class="brand-mark" src="/img/logo-mark.png" alt="" width="32" height="32" /><span class="brand-name">it<i class="hy">-</i><b>cher</b></span></a>
+      <button class="drawer-close" data-drawer-close aria-label="메뉴 닫기">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+
+    <div class="drawer-body">
+      <button class="drawer-search" data-search-open data-drawer-close>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        강의·슬라이드 검색
+      </button>
+      <div class="drawer-acc">
+        <button class="drawer-acc-trigger" aria-expanded="true" aria-controls="acc-code">
+          코딩
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="drawer-acc-panel" id="acc-code"><div class="drawer-acc-inner" data-nav-grid="code">
+          {CODE_BUCKETS.map((b) => {
+            const live = bucketIsLive(b)
+            return (
+              <a class="nav-opt" href={`/code/${b.slug}/`} data-nav-key={`code:${b.slug}`}>
+                <span class="nav-opt-ico is-cool"><Glyph name={b.glyph} /></span>
+                <span class="nav-opt-body"><span class="nav-opt-title">{b.label}</span><span class="nav-opt-sub">{b.subtitle}</span></span>
+                {live
+                  ? <span class="badge badge--live"><span class="dot"></span>운영</span>
+                  : <span class="badge badge--planned"><span class="dot"></span>예정</span>}
+              </a>
+            )
+          })}
+          <button type="button" class="nav-showall" data-nav-showall aria-expanded="false">
+            <span class="nav-showall-txt">전체 분야 보기</span>
+            <svg class="nav-showall-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+        </div></div>
+      </div>
+
+      <div class="drawer-acc">
+        <button class="drawer-acc-trigger" aria-expanded="false" aria-controls="acc-cert">
+          자격증
+          <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="drawer-acc-panel" id="acc-cert"><div class="drawer-acc-inner">
+          {CERT_TRACKS.map((t) => (
+            <a class="nav-opt" href={t.href}>
+              <span class="nav-opt-ico"><Glyph name={t.glyph} /></span>
+              <span class="nav-opt-body"><span class="nav-opt-title">{t.label}</span><span class="nav-opt-sub">{t.sub}</span></span>
+              {t.status === 'live'
+                ? <span class="badge badge--live"><span class="dot"></span>운영</span>
+                : <span class="badge badge--planned"><span class="dot"></span>예정</span>}
+            </a>
+          ))}
+        </div></div>
+      </div>
+
+      <a class="drawer-link" href="/map/">커리큘럼 전체보기</a>
+      <a class="drawer-link" href="/start/">시작하기</a>
+      <a class="drawer-link" href="/about/">소개</a>
+    </div>
+
+    <div class="drawer-foot">
+      <a class="btn btn--lg" href="/start/">무료로 시작 →</a>
+      <div class="drawer-theme">
+        <span>화면 테마</span>
+        <button class="theme-toggle" data-theme-toggle aria-label="라이트/다크 테마 전환">
+          <svg class="moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+          <svg class="sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg>
+        </button>
+      </div>
+    </div>
+  </aside>
+
+  {/* ============ 사이트 검색 모달 (Pagefind UI, 지연 로드) ============ */}
+  <div class="search-modal" data-search-modal hidden role="dialog" aria-modal="true" aria-label="사이트 검색">
+    <div class="search-scrim" data-search-close></div>
+    <div class="search-panel">
+      <div class="search-panel-head">
+        <span class="search-kbd-hint">강의 본문 · 자격증 강 제목을 검색하세요</span>
+        <button class="search-close" data-search-close aria-label="검색 닫기">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+        </button>
+      </div>
+      <div id="pf-search" class="pf-mount"></div>
+      {/* F45: 검색 결과가 0건이어도 막다른 길이 아니게 — 상시 '커리큘럼 전체보기' 복구 링크(정적 마크업, 무JS 영향 0). */}
+      <a class="search-allmap" href="/map/">
+        <span>찾는 게 없나요? <b>커리큘럼 전체보기</b></span>
+        <span class="search-allmap-arr" aria-hidden="true">→</span>
+      </a>
+    </div>
+  </div>
+
+  <main id="main" tabindex="-1">
+    <slot />
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div class="footer-top">
+        <div class="footer-about">
+          <a class="brand" href="/"><img class="brand-mark" src="/img/logo-mark.png" alt="" width="32" height="32" /><span class="brand-name">it<i class="hy">-</i><b>cher</b></span></a>
+          <p>비전공자를 위한 IT 자격증·코딩 무료 강의자료. 막막한 시작을 함께합니다. — 튜터 홍순구</p>
+        </div>
+        <div>
+          <p class="eyebrow" style="margin-bottom: var(--sp-3);">더 배우려면 · 공식 채널</p>
+          <div class="funnel-grid">
+            {FUNNEL_LIST.map((f) => (
+              <FunnelLink funnel={f} class="card funnel-card" arrow={false} badge={false}>{f.logoImg ? <div class:list={['fn-logo', 'fn-logo--img', `is-${f.logoFit ?? 'contain'}`]}><img src={f.logoImg} alt={`${f.name} 로고`} loading="lazy" /></div> : <div class="fn-logo" style={`background:${f.logoBg}`}>{f.logoText}</div>}<div class="fn-kind">{f.kind}</div><div class="fn-name">{f.name}</div><div class="fn-desc">{f.desc}</div><span class="fn-link">{f.comingSoon ? '준비중' : '바로가기 ↗'}</span></FunnelLink>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>© 2026 it-cher · Theo Labs. 강의자료는 무료로 공개됩니다.</span>
+        <span style="display:flex; gap: var(--sp-4);"><a href="/about/">소개</a><a href="/start/">시작하기</a></span>
+      </div>
+    </div>
+  </footer>
+
+  {/* 테마 토글 */}
+  <script is:inline>
+    (function () {
+      window.toggleTheme = function () {
+        var r = document.documentElement;
+        var n = (r.getAttribute('data-theme') || 'light') === 'dark' ? 'light' : 'dark';
+        r.setAttribute('data-theme', n);
+        try { localStorage.setItem('hc-theme', n); } catch (e) {}
+      };
+      document.querySelectorAll('[data-theme-toggle]').forEach(function (b) {
+        b.addEventListener('click', window.toggleTheme);
+      });
+    })();
+  </script>
+
+  {/* 모바일 드로어 + 터치 드롭다운 (claude.ai/design 핸드오프 ②) */}
+  <script is:inline>
+    (function () {
+      var burger = document.querySelector('.nav-toggle');
+      var drawer = document.getElementById('mobile-drawer');
+      var scrim = document.querySelector('[data-drawer-scrim]');
+      var lastFocus = null;
+      function focusables() {
+        if (!drawer) return [];
+        return Array.prototype.slice.call(drawer.querySelectorAll('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'))
+          .filter(function (el) {
+            if (el !== document.activeElement && el.offsetParent === null) return false;
+            // F15: 접힌 아코디언 패널(visibility:hidden)의 링크는 탭 트랩에서 제외(네이티브 Tab 과 정합).
+            return getComputedStyle(el).visibility !== 'hidden';
+          });
+      }
+      function openDrawer() {
+        if (!drawer || drawer.classList.contains('is-open')) return;
+        lastFocus = document.activeElement;
+        drawer.classList.add('is-open');
+        if (scrim) scrim.classList.add('is-open');
+        drawer.setAttribute('aria-hidden', 'false');
+        if (burger) burger.setAttribute('aria-expanded', 'true');
+        document.body.classList.add('body--locked');
+        document.addEventListener('keydown', onKey);
+        // F15: visibility/transition 직후라 한 프레임 미뤄 첫 포커스가 .nav-toggle 에 잔존하지 않게.
+        requestAnimationFrame(function () { var f = focusables(); if (f.length) f[0].focus(); });
+      }
+      function closeDrawer() {
+        if (!drawer || !drawer.classList.contains('is-open')) return;
+        drawer.classList.remove('is-open');
+        if (scrim) scrim.classList.remove('is-open');
+        drawer.setAttribute('aria-hidden', 'true');
+        if (burger) burger.setAttribute('aria-expanded', 'false');
+        document.body.classList.remove('body--locked');
+        document.removeEventListener('keydown', onKey);
+        if (lastFocus && lastFocus.focus) lastFocus.focus();
+      }
+      function onKey(e) {
+        if (e.key === 'Escape') { closeDrawer(); return; }
+        if (e.key !== 'Tab') return;
+        var f = focusables(); if (!f.length) return;
+        var first = f[0], last = f[f.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+      if (burger) burger.addEventListener('click', openDrawer);
+      if (scrim) scrim.addEventListener('click', closeDrawer);
+      document.querySelectorAll('[data-drawer-close]').forEach(function (b) { b.addEventListener('click', closeDrawer); });
+      if (drawer) drawer.querySelectorAll('a[href]').forEach(function (a) {
+        if (a.getAttribute('aria-disabled') === 'true') return;   // 예정 항목: 닫지도/이동하지도 않음
+        a.addEventListener('click', closeDrawer);
+      });
+      // 예정/비활성 앵커의 헛클릭 차단 — 이제 soon 항목은 href 자체가 없어(무JS시도 점프 0) inert 하지만,
+      //   혹시 모를 활성 href 가 붙어도 이동 안 하도록 방어로 남겨둔다(드로어+데스크톱 드롭다운 공통).
+      document.querySelectorAll('a[aria-disabled="true"]').forEach(function (a) {
+        a.addEventListener('click', function (e) { e.preventDefault(); });
+      });
+      var mq = window.matchMedia('(max-width: 760px)');
+      var onMq = function (e) { if (!e.matches) closeDrawer(); };
+      if (mq.addEventListener) mq.addEventListener('change', onMq); else if (mq.addListener) mq.addListener(onMq);
+
+      // 드로어 아코디언 (자격증/코딩)
+      document.querySelectorAll('.drawer-acc-trigger').forEach(function (t) {
+        t.addEventListener('click', function () {
+          t.setAttribute('aria-expanded', String(t.getAttribute('aria-expanded') !== 'true'));
+        });
+      });
+
+      // 드롭다운 내비 — ARIA 는 입력방식 무관 공통(데스크톱 hover/focus + 터치 탭토글 둘 다 스크린리더에 노출). F17
+      var navItems = Array.prototype.slice.call(document.querySelectorAll('.nav .nav-item'));
+      navItems.forEach(function (item) {
+        var link = item.querySelector('.nav-link');
+        var panel = item.querySelector('.nav-panel');
+        if (!link) return;
+        link.setAttribute('aria-haspopup', 'true');
+        link.setAttribute('aria-expanded', 'false');
+        if (panel && panel.id) link.setAttribute('aria-controls', panel.id);
+      });
+
+      if (window.matchMedia('(hover: none), (pointer: coarse)').matches) {
+        // 터치: hover 가 없으니 탭으로 열고 닫음(is-open 클래스 토글)
+        var closeAll = function (except) {
+          navItems.forEach(function (it) {
+            if (it === except) return;
+            it.classList.remove('is-open');
+            var l = it.querySelector('.nav-link'); if (l) l.setAttribute('aria-expanded', 'false');
+          });
+        };
+        navItems.forEach(function (item) {
+          var link = item.querySelector('.nav-link');
+          if (!link) return;
+          link.addEventListener('click', function (e) {
+            e.preventDefault();
+            var willOpen = !item.classList.contains('is-open');
+            closeAll(item);
+            item.classList.toggle('is-open', willOpen);
+            link.setAttribute('aria-expanded', String(willOpen));
+          });
+        });
+        document.addEventListener('click', function (e) {
+          var el = e.target;
+          if (el && el.nodeType === 1 && el.closest && el.closest('.nav .nav-item')) return;
+          closeAll(null);
+        });
+        document.addEventListener('keydown', function (e) {
+          if (e.key !== 'Escape') return;
+          navItems.forEach(function (it) {
+            if (!it.classList.contains('is-open')) return;
+            it.classList.remove('is-open');
+            var l = it.querySelector('.nav-link'); if (l) { l.setAttribute('aria-expanded', 'false'); l.focus(); }
+          });
+        });
+      } else {
+        // 데스크톱: 패널은 CSS :hover/:focus-within 으로 열린다 → aria-expanded 를 포커스/호버에 동기화하고,
+        //   Escape 시 is-closed 로 강제로 접고 포커스를 트리거(.nav-link)로 되돌린다(다음 focusout/hover 에서 자동 해제). F17
+        navItems.forEach(function (item) {
+          var link = item.querySelector('.nav-link');
+          if (!link) return;
+          item.addEventListener('focusin', function () { if (!item.classList.contains('is-closed')) link.setAttribute('aria-expanded', 'true'); });
+          item.addEventListener('focusout', function (e) {
+            if (item.contains(e.relatedTarget)) return;   // 항목 내부 이동이면 유지
+            item.classList.remove('is-closed');
+            link.setAttribute('aria-expanded', 'false');
+          });
+          item.addEventListener('mouseenter', function () { item.classList.remove('is-closed'); link.setAttribute('aria-expanded', 'true'); });
+          item.addEventListener('mouseleave', function () { if (!item.contains(document.activeElement)) link.setAttribute('aria-expanded', 'false'); });
+        });
+        document.addEventListener('keydown', function (e) {
+          if (e.key !== 'Escape') return;
+          navItems.forEach(function (item) {
+            if (!item.contains(document.activeElement)) return;
+            var link = item.querySelector('.nav-link');
+            item.classList.add('is-closed');
+            if (link) { link.setAttribute('aria-expanded', 'false'); link.focus(); }
+          });
+        });
+      }
+    })();
+  </script>
+
+  {/* 온보딩 맞춤 내비(Phase 2): /start 진단값(localStorage itcher:onboard:v1)으로 '코딩' 드롭다운을 추천만으로 좁힌다.
+      선언적 계약 — [data-nav-grid="code"] 그리드 + [data-nav-key="code:<slug>"] 옵션 + [data-nav-showall] 토글.
+      기본 마크업은 전체 노출 → 진단/JS 없으면 9분류 그대로 보임(프로그레시브 인핸스먼트, 막다른 길 0).
+      추천이 이 그리드에 하나도 없으면 축소하지 않는다(안전). window.ITcherNav.apply/clear 로 /start 가 즉시 반영. */}
+  <script is:inline>
+    (function () {
+      var KEY = 'itcher:onboard:v1';
+      function load() { try { var v = JSON.parse(localStorage.getItem(KEY)); return v && v.v === 1 ? v : null; } catch (e) { return null; } }
+      function grids() { return Array.prototype.slice.call(document.querySelectorAll('[data-nav-grid="code"]')); }
+      function reset(g) {
+        g.classList.remove('is-narrowed', 'show-all');
+        g.querySelectorAll('.nav-opt[data-nav-key]').forEach(function (o) { o.classList.remove('is-rec', 'is-top'); });
+        var t = g.querySelector('[data-nav-showall]'); if (t) t.setAttribute('aria-expanded', 'false');
+      }
+      function sync(g, t) {
+        var open = g.classList.contains('show-all');
+        var hidden = g.querySelectorAll('.nav-opt[data-nav-key]:not(.is-rec)').length;
+        t.setAttribute('aria-expanded', String(open));
+        var lbl = t.querySelector('.nav-showall-txt');
+        if (lbl) lbl.textContent = open ? '추천만 보기' : ('전체 분야 보기 (' + hidden + ')');
+      }
+      function wire(g, t) {
+        if (t.__wired) return; t.__wired = true;
+        t.addEventListener('click', function (e) { e.preventDefault(); g.classList.toggle('show-all'); sync(g, t); });
+      }
+      function apply() {
+        var data = load();
+        var rec = (data && Array.isArray(data.recCode)) ? data.recCode : [];
+        grids().forEach(function (g) {
+          reset(g);
+          if (!rec.length) return;
+          var matched = 0;
+          g.querySelectorAll('.nav-opt[data-nav-key]').forEach(function (o) {
+            var slug = (o.getAttribute('data-nav-key') || '').replace('code:', '');
+            var i = rec.indexOf(slug);
+            if (i >= 0) { o.classList.add('is-rec'); if (i === 0) o.classList.add('is-top'); matched++; }
+          });
+          if (!matched) return;            // 추천이 이 그리드에 없으면 전체 노출 유지(안전)
+          g.classList.add('is-narrowed');
+          var t = g.querySelector('[data-nav-showall]');
+          if (t) { wire(g, t); sync(g, t); }
+        });
+      }
+      function clear() { try { localStorage.removeItem(KEY); } catch (e) {} grids().forEach(reset); }
+      window.ITcherNav = { apply: apply, clear: clear };
+      function boot() { apply(); }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+      window.addEventListener('storage', function (e) { if (e.key === KEY) apply(); });
+    })();
+  </script>
+
+  {/* 사이트 검색: Pagefind UI 를 첫 열기 때 지연 로드(빌드 산출물 /pagefind/ 의존). dev/미빌드면 안내문 폴백 */}
+  <script is:inline>
+    (function () {
+      var modal = document.querySelector('[data-search-modal]');
+      if (!modal) return;
+      var mount = document.getElementById('pf-search');
+      var loaded = false, loading = false;
+      var lastFocus = null;   // F13: 모달 열기 전 포커스(닫을 때 복원)
+      var FAIL_HTML = '<p class="search-fallback">검색 색인을 불러오지 못했어요. 빌드된 사이트에서 동작합니다 (<code>npm run build</code> 후 <code>npm run preview</code>).</p>';
+      function fail() {
+        loading = false;
+        if (mount && mount.getAttribute('data-failed') !== '1') { mount.setAttribute('data-failed', '1'); mount.innerHTML = FAIL_HTML; }
+      }
+      function focusInput() { var i = modal.querySelector('input'); if (i) { try { i.focus(); } catch (e) {} } }
+      function load(after) {
+        if (loaded) { if (after) after(); return; }
+        if (loading) return;
+        loading = true;
+        var link = document.createElement('link');
+        link.rel = 'stylesheet'; link.href = '/pagefind/pagefind-ui.css'; link.onerror = fail;
+        document.head.appendChild(link);
+        var s = document.createElement('script');
+        s.src = '/pagefind/pagefind-ui.js';
+        s.onload = function () {
+          loading = false;
+          if (typeof window.PagefindUI !== 'function') { fail(); return; }
+          loaded = true;
+          try {
+            new window.PagefindUI({
+              element: '#pf-search', showImages: false, showSubResults: true,
+              pageSize: 6, excerptLength: 18, resetStyles: false,
+              translations: {
+                placeholder: '강의·슬라이드 검색…', clear_search: '지우기', load_more: '더 보기',
+                search_label: '사이트 검색', filters_label: '필터',
+                zero_results: '“[SEARCH_TERM]” 검색 결과가 없어요',
+                many_results: '“[SEARCH_TERM]” 결과 [COUNT]개',
+                one_result: '“[SEARCH_TERM]” 결과 [COUNT]개',
+                alt_search: '“[SEARCH_TERM]” 결과가 없어 “[DIFFERENT_TERM]” 결과를 보여드려요',
+                search_suggestion: '“[SEARCH_TERM]” 결과가 없어요. 다른 검색어를 입력해 보세요',
+                searching: '“[SEARCH_TERM]” 검색 중…'
+              }
+            });
+          } catch (e) { fail(); return; }
+          if (after) after();
+        };
+        s.onerror = fail;
+        document.body.appendChild(s);
+      }
+      // F13: 모달 안 포커스 가능한 요소(닫기 버튼 + Pagefind 입력/결과). 결과는 비동기로 늘어나니 매번 새로 수집.
+      function searchFocusables() {
+        return Array.prototype.slice.call(
+          modal.querySelectorAll('a[href], button:not([disabled]), input, textarea, select, [tabindex]:not([tabindex="-1"])')
+        ).filter(function (el) { return el.offsetParent !== null || el === document.activeElement; });
+      }
+      function openSearch() {
+        if (!modal.hasAttribute('hidden')) return;
+        lastFocus = document.activeElement;            // F13: 닫을 때 되돌릴 포커스 저장(여는 버튼 등)
+        modal.removeAttribute('hidden');
+        document.body.classList.add('body--locked');
+        load(focusInput);
+        focusInput();
+        document.addEventListener('keydown', onKey);
+      }
+      function closeSearch() {
+        if (modal.hasAttribute('hidden')) return;
+        modal.setAttribute('hidden', '');
+        document.body.classList.remove('body--locked');
+        document.removeEventListener('keydown', onKey);
+        if (lastFocus && lastFocus.focus) { try { lastFocus.focus(); } catch (e) {} }   // F13: 열기 전 위치로 복원
+        lastFocus = null;
+      }
+      // F13: Escape 닫기 + Tab 포커스 트랩(드로어 onKey 와 동일 패턴) — 모달 밖으로 새지 않게.
+      function onKey(e) {
+        if (e.key === 'Escape') { closeSearch(); return; }
+        if (e.key !== 'Tab') return;
+        var f = searchFocusables(); if (!f.length) return;
+        var first = f[0], last = f[f.length - 1];
+        if (!modal.contains(document.activeElement)) { e.preventDefault(); first.focus(); }   // 배후로 샌 포커스 회수
+        else if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      }
+      document.querySelectorAll('[data-search-open]').forEach(function (b) {
+        b.addEventListener('click', function (e) { e.preventDefault(); openSearch(); });
+      });
+      document.querySelectorAll('[data-search-close]').forEach(function (b) {
+        b.addEventListener('click', closeSearch);
+      });
+      document.addEventListener('keydown', function (e) {
+        if ((e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey)) { e.preventDefault(); openSearch(); return; }
+        if (e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+          var t = e.target, tag = (t && t.tagName) || '';
+          if (/^(INPUT|TEXTAREA|SELECT)$/.test(tag) || (t && t.isContentEditable)) return;
+          e.preventDefault(); openSearch();
+        }
+      });
+    })();
+  </script>
+
+  {/* 학습 진도(자기 위치/이어보기): 100% 정적이라 진도는 브라우저 localStorage 에만 저장(계정·서버 없음).
+      선언적 계약 — [data-read-key]=읽음표시 토글대상 · [data-prog][data-prog-items]=그룹요약 · [data-resume-last]=최근강의 이어보기.
+      JS 꺼지면 정적 위치 라벨/바만 보이고 기능만 degrade(콘텐츠는 항상 보임). */}
+  <script is:inline>
+    (function () {
+      var READ = 'itcher:read:v1', LAST = 'itcher:last:v1';
+      function load(k, fb) { try { var v = JSON.parse(localStorage.getItem(k)); return v == null ? fb : v; } catch (e) { return fb; } }
+      function save(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+      var readMap = load(READ, {});
+      function isRead(h) { return !!(h && readMap[h]); }
+      function setRead(h, on) { if (!h) return; if (on) readMap[h] = 1; else delete readMap[h]; save(READ, readMap); refresh(); }
+      function setLast(h, label) { if (h) save(LAST, { href: h, label: label || '' }); }
+      function pct(a, b) { return b ? Math.round((a / b) * 100) : 0; }
+
+      function refresh() {
+        document.querySelectorAll('[data-read-key]').forEach(function (el) {
+          el.classList.toggle('is-read', isRead(el.getAttribute('data-read-key')));
+        });
+        document.querySelectorAll('[data-prog]').forEach(function (box) {
+          var items; try { items = JSON.parse(box.getAttribute('data-prog-items') || '[]'); } catch (e) { items = []; }
+          var total = items.length, read = 0, resume = null;
+          for (var i = 0; i < items.length; i++) { if (isRead(items[i].h)) read++; else if (!resume) resume = items[i]; }
+          var p = pct(read, total);
+          var fill = box.querySelector('[data-prog-fill]'); if (fill) fill.style.width = p + '%';
+          var cnt = box.querySelector('[data-prog-count]'); if (cnt) cnt.textContent = read + ' / ' + total;
+          var pe = box.querySelector('[data-prog-pct]'); if (pe) pe.textContent = p + '%';
+          box.classList.toggle('is-done', total > 0 && read >= total);
+          box.classList.toggle('is-started', read > 0);
+          var rlink = box.querySelector('[data-prog-resume]');
+          if (rlink) {
+            var target = resume || items[0] || null;
+            if (target) { rlink.setAttribute('href', target.h); var rl = box.querySelector('[data-prog-resume-label]'); if (rl) rl.textContent = target.l; }
+          }
+        });
+        var last = load(LAST, null);
+        document.querySelectorAll('[data-resume-last]').forEach(function (box) {
+          if (last && last.href) {
+            box.classList.add('has-last');
+            var a = box.querySelector('[data-resume-link]'); if (a) a.setAttribute('href', last.href);
+            var t = box.querySelector('[data-resume-text]'); if (t) t.textContent = last.label || '이어서 보기';
+          } else { box.classList.remove('has-last'); }
+        });
+        var lec = document.querySelector('[data-lec]');
+        if (lec) { var k = lec.getAttribute('data-lec-key'); var tg = document.querySelector('[data-lec-toggle]'); if (tg) tg.setAttribute('aria-pressed', String(isRead(k))); }
+      }
+
+      function initLecture() {
+        var lec = document.querySelector('[data-lec]');
+        if (!lec) return;
+        var key = lec.getAttribute('data-lec-key');
+        if (key) setLast(key, lec.getAttribute('data-lec-label') || document.title);
+        var toggle = document.querySelector('[data-lec-toggle]');
+        if (toggle && key) toggle.addEventListener('click', function () { setRead(key, !isRead(key)); });
+        // 끝까지 읽으면 자동 '읽음' — 단, 실제로 스크롤해서 말미 센티넬이 보일 때만(열자마자 읽음 처리 방지).
+        var end = document.querySelector('[data-lec-end]');
+        if (end && key) {
+          var marked = false;
+          var check = function () {
+            if (marked) return;
+            if ((window.scrollY || window.pageYOffset || 0) < 80) return;
+            var r = end.getBoundingClientRect();
+            if (r.top <= (window.innerHeight || document.documentElement.clientHeight || 0) + 40) {
+              marked = true; setRead(key, true); window.removeEventListener('scroll', check);
+            }
+          };
+          window.addEventListener('scroll', check, { passive: true });
+        }
+      }
+
+      window.ITcherProgress = { isRead: isRead, setRead: setRead, refresh: refresh };
+      function boot() { initLecture(); refresh(); }
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+      window.addEventListener('storage', function (e) { if (e.key === READ) { readMap = load(READ, {}); refresh(); } });
+    })();
+  </script>
+
+  {/* 코드 하이라이팅: Prism core + autoloader (테마는 doc.css 의 디자인 매칭 토큰).
+       F49: 코드블록(`pre code.language-*`)이 있는 페이지에서만 CDN 로드 — 데크/소개 등 코드 없는 페이지는 외부 요청 0.
+       manual=true 로 자동 하이라이트를 막고, core→autoloader 순서 로드 후 직접 highlightAll(언어 문법은 autoloader 가 jsdelivr 에서 자기 src 기준 경로로 지연 로드). */}
+  <script is:inline>
+    (function () {
+      if (!document.querySelector('pre code[class*="language-"]')) return;
+      window.Prism = window.Prism || {}; window.Prism.manual = true;
+      var base = 'https://cdn.jsdelivr.net/npm/prismjs@1.29.0/';
+      function inject(src, cb) { var s = document.createElement('script'); s.src = src; s.onload = cb; document.head.appendChild(s); }
+      inject(base + 'components/prism-core.min.js', function () {
+        inject(base + 'plugins/autoloader/prism-autoloader.min.js', function () { window.Prism.highlightAll(); });
+      });
+    })();
+  </script>
+
+  {/* 코드블록 복사 버튼(.code-copy 가 있는 코딩 문서뷰에서만). 본문은 런타임에 <code>.textContent 로 읽어
+       Prism 하이라이트 타이밍과 무관. clipboard API 없으면 textarea+execCommand 폴백. */}
+  <script is:inline>
+    (function () {
+      if (!document.querySelector('.code-copy')) return;
+      function textOf(fig) {
+        var el = fig.querySelector('pre code') || fig.querySelector('pre');
+        return el ? el.textContent.replace(/\n+$/, '') : '';
+      }
+      function copy(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text);
+        return new Promise(function (res, rej) {
+          try {
+            var ta = document.createElement('textarea');
+            ta.value = text; ta.setAttribute('readonly', '');
+            ta.style.position = 'absolute'; ta.style.left = '-9999px';
+            document.body.appendChild(ta); ta.select();
+            var ok = document.execCommand('copy'); document.body.removeChild(ta);
+            ok ? res() : rej();
+          } catch (e) { rej(e); }
+        });
+      }
+      document.querySelectorAll('.code-copy').forEach(function (btn) {
+        var fig = btn.closest('.code-figure'); if (!fig) return;
+        var label = btn.querySelector('.code-copy-txt');
+        var timer = null;
+        function flash(msg, cls) {
+          if (label) label.textContent = msg;
+          if (cls) fig.classList.add('is-copied');
+          btn.setAttribute('aria-label', msg);
+          clearTimeout(timer);
+          timer = setTimeout(function () {
+            fig.classList.remove('is-copied');
+            if (label) label.textContent = '복사';
+            btn.setAttribute('aria-label', '코드 복사');
+          }, 1600);
+        }
+        btn.addEventListener('click', function () {
+          copy(textOf(fig)).then(function () { flash('복사됨', true); })
+            .catch(function () { flash('복사 실패', false); });
+        });
+      });
+    })();
+  </script>
+
+  <style>
+    /* 키보드/스크린리더용 본문 바로가기 — 평소 화면 밖, 포커스 시 좌상단 노출 */
+    .skip-link { position: fixed; left: 12px; top: -56px; z-index: 1200; padding: 10px 16px; border-radius: var(--r-md, 8px); background: var(--brand-text, #db3f28); color: #fff; font-weight: var(--fw-bold, 700); text-decoration: none; box-shadow: var(--shadow-lg, 0 8px 24px rgba(0,0,0,.18)); transition: top .15s ease; }
+    .skip-link:focus { top: 12px; outline: 2px solid #fff; outline-offset: 2px; }
+    main:focus { outline: none; }
+  </style>
+</body>
+</html>

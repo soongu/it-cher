@@ -1,0 +1,47 @@
+---
+import Base from '../../../../../../layouts/Base.astro'
+import Crumbs from '../../../../../../components/Crumbs.astro'
+import { cpeSubjects, cpeSubject } from '../../../../../../lib/content.mjs'
+import ProgressGroup from '../../../../../../components/ProgressGroup.astro'
+
+export function getStaticPaths() {
+  return cpeSubjects().map((s) => ({ params: { subject: s.slug } }))
+}
+
+const { subject } = Astro.params
+const s = cpeSubject(subject)
+const ready = s.lectures.filter((l) => l.deck).length
+// 진도 대상은 슬라이드가 준비된 강만(빈 '준비중' 페이지는 완료 개념이 없음)
+const progItems = s.lectures.filter((l) => l.deck).map((l) => ({ h: `/cert/cpe/written/theory/${s.slug}/${l.slug}/`, l: `${l.num}강 · ${l.topic}` }))
+---
+<Base title={`${s.label} — 정보처리기사 필기 이론 · it-cher`} desc={`정보처리기사 필기 이론 ${s.label} 강별 슬라이드`}>
+  <div class="page">
+    <Crumbs trail={[{ href: '/cert/', label: '자격증' }, { href: '/cert/cpe/', label: '정보처리기사' }, { href: '/cert/cpe/written/', label: '필기' }, { href: '/cert/cpe/written/theory/', label: '이론' }, { label: s.label }]} />
+    <div class="page-head">
+      <h1>{s.label}</h1>
+      <p class="lede">전체 {s.lectures.length}강 · 슬라이드 {ready}개 준비됨. 슬라이드 강의부터 학습할 수 있어요.</p>
+    </div>
+
+    <div style="margin-bottom: var(--sp-5);"><ProgressGroup items={progItems} /></div>
+
+    <div class="lec-list">
+      {s.lectures.map((l) => {
+        const href = `/cert/cpe/written/theory/${s.slug}/${l.slug}/`
+        // 데크 준비된 강만 클릭 가능(<a>). 준비중 강은 비활성 행(<div>)으로 노출 — 로드맵은 보이되 빈 페이지 헛클릭은 0.
+        const Row = l.deck ? 'a' : 'div'
+        return (
+        <Row class:list={['lec-row', { 'is-disabled': !l.deck }]} href={l.deck ? href : undefined} data-read-key={l.deck ? href : undefined} aria-disabled={l.deck ? undefined : 'true'} title={l.deck ? undefined : '슬라이드 준비중 — 준비되면 열려요'}>
+          <span class="lec-num">{l.num}</span>
+          <span><span class="lec-title">{l.topic}</span></span>
+          <span class="lec-meta">
+            {l.deck && <span class="row-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>읽음</span>}
+            {l.deck
+              ? <span class="badge badge--slide">슬라이드</span>
+              : <span class="badge badge--planned"><span class="dot"></span>준비중</span>}
+          </span>
+        </Row>
+        )
+      })}
+    </div>
+  </div>
+</Base>

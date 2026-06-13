@@ -1,0 +1,15 @@
+---
+// 외부 링크(유료채널·SNS 등 오프사이트) 공용 헬퍼 — 새 탭 + 보안 rel + '새 탭' 표시.
+// 왜 새 탭: 이탈방지. 학생이 보던 강의·진도 위치를 잃지 않게 외부는 새 탭으로 연다.
+//   → 내부 링크엔 쓰지 말 것(내부는 같은 탭 유지: 탭 난립·뒤로가기 깨짐 방지).
+// rel 기본 'noopener'(탭내빙 차단)만 둔다 — noreferrer 는 일부러 빼서 퍼널 유입 출처(referrer)가
+//   파트너(Klue·스파르타·에듀윌)에 전달되게 한다(유입 귀속/제휴 트래킹). URL에 민감정보 없음.
+//   props: href(필수) · class · arrow(끝에 ↗ 표시, 기본 true) · rel(기본 'noopener') · 그 외 속성은 ...rest 통과(style 등)
+const { href, class: cls, arrow = true, rel = 'noopener', ...rest } = Astro.props
+---
+<a href={href} class={cls} target="_blank" rel={rel} {...rest}><slot />{arrow && <span class="extlink-arrow" aria-hidden="true">↗</span>}<span class="extlink-sr"> (새 탭에서 열림)</span></a>
+
+<style>
+  .extlink-arrow { margin-left: .22em; font-size: .85em; opacity: .75; }
+  .extlink-sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+</style>

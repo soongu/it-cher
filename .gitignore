@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.astro/
+.DS_Store
+.omc/
+.claude/
+
+# 형제 폴더에서 복사해 오는 데크 정적자산 (scripts/sync-decks.mjs 로 재생성, ASCII 슬러그)
+public/decks/
+
+# claude.ai/design 핸드오프 번들 (디자인 원본 참고용, 빌드/배포 대상 아님)
+_design_handoff/
